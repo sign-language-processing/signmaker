@@ -29,8 +29,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Project Pages are served under /<repo>/, so the build needs that base path.
-      - run: npm run build -- --base=/signmaker/
+      # Served behind the rylo.com reverse proxy at /sign/research/signmaker/,
+      # matching the research site's base (see sign-language-processing.github.io).
+      - run: npm run build -- --base=/sign/research/signmaker/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
