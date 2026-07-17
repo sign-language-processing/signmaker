@@ -230,11 +230,13 @@ export function CanvasControls() {
       <div className="canvas-tools zoom-control">
         <button
           type="button"
-          id="tool-zoomReset"
+          id="tool-zoom"
           className="canvas-btn zoom-btn"
-          data-tip={tip(t, 'zoomReset')}
-          aria-label={tip(t, 'zoomReset')}
-          onClick={() => useUiStore.getState().set({ zoom: 1 })}
+          data-tip={t('zoom')}
+          aria-label={t('zoom')}
+          // ponytail: no action — tapping only focuses the control so :focus-within reveals the
+          // slider on touch devices (iOS buttons don't focus on tap by themselves). ⌘0 resets.
+          onClick={(e) => e.currentTarget.focus()}
         >
           {Math.round(zoom * 100)}%
         </button>

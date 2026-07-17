@@ -8,7 +8,7 @@ test.describe('Canvas zoom', () => {
     await page.goto(`/index.html#?fsw=${encoded}`);
     await waitForApp(page);
     const layer = page.locator('.signbox-zoom');
-    const btn = page.locator('#tool-zoomReset');
+    const btn = page.locator('#tool-zoom');
 
     await expect(btn).toHaveText('100%');
     await page.keyboard.press('Meta+=');
@@ -35,9 +35,9 @@ test.describe('Canvas zoom', () => {
     await page.goto(`/index.html#?fsw=${encoded}`);
     await waitForApp(page);
     await page.keyboard.press('Meta+=');
-    await expect(page.locator('#tool-zoomReset')).toHaveText('125%');
+    await expect(page.locator('#tool-zoom')).toHaveText('125%');
     await page.reload();
     await waitForApp(page);
-    await expect(page.locator('#tool-zoomReset')).toHaveText('125%');
+    await expect(page.locator('#tool-zoom')).toHaveText('125%');
   });
 });
