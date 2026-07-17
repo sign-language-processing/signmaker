@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ZoomIcon,
 } from './icons';
 
 function IconButton({
@@ -254,6 +255,7 @@ export function CanvasControls() {
           // slider on touch devices (iOS buttons don't focus on tap by themselves). ⌘0 resets.
           onClick={(e) => e.currentTarget.focus()}
         >
+          <ZoomIcon />
           {Math.round(zoom * 100)}%
         </button>
         <input
