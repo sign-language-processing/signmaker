@@ -61,15 +61,24 @@ test.describe('URL parameters', () => {
     await expect(page.locator('.export-formats button')).toHaveCount(4); // PNG, SVG, FSW, SWU
   });
 
-  test('Cmd+S opens the export dialog and is repeatable', async ({ page }) => {
+  test('Cmd+E opens the export dialog and is repeatable', async ({ page }) => {
     await page.goto(`/index.html#?fsw=${encoded}`);
     await waitForApp(page);
-    await page.keyboard.press('Meta+s');
+    await page.keyboard.press('Meta+e');
     await expect(page.locator('dialog.export-dialog')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('dialog.export-dialog')).toBeHidden();
-    await page.keyboard.press('Meta+s');
+    await page.keyboard.press('Meta+e');
     await expect(page.locator('dialog.export-dialog')).toBeVisible();
+  });
+
+  test('Cmd+S saves (pushes a history entry) instead of opening export', async ({ page }) => {
+    await page.goto(`/index.html#?fsw=${encoded}`);
+    await waitForApp(page);
+    const before = await page.evaluate(() => history.length);
+    await page.keyboard.press('Meta+s');
+    await expect(page.locator('dialog.export-dialog')).toBeHidden();
+    expect(await page.evaluate(() => history.length)).toBe(before + 1);
   });
 
   test('FSW/SWU buttons copy to the clipboard and show a toast', async ({ page, context }) => {

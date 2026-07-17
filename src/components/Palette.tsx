@@ -12,6 +12,7 @@ import { staticBoxes, boxOf, type Box } from '../lib/snap';
 import { snapToGuides, clearGuides } from '../lib/guides';
 import { activateSymbol } from '../lib/palette';
 import { showTooltip } from '../lib/tooltip';
+import { tip } from '../lib/shortcuts';
 import { useSymbolSvg } from '../hooks/useGlyph';
 import { HomeIcon, SaveIcon } from './icons';
 
@@ -164,7 +165,7 @@ export function Palette() {
             </>
           )}
         </nav>
-        <button type="button" className="palette-save" onClick={save}>
+        <button type="button" className="palette-save" onClick={save} data-tip={tip(t, 'save')}>
           <SaveIcon />
           {t('save')}
         </button>
