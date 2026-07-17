@@ -30,9 +30,11 @@ function dropAnchor(symbolKey: string, clientX: number, clientY: number): { x: n
   if (!box || !pointInElement('signbox', clientX, clientY)) return null;
   const r = box.getBoundingClientRect();
   const [w, h] = symbolSize(symbolKey);
+  // The symbol layer is scaled about the box center, so unscale the pointer's offset from it.
+  const zoom = useUiStore.getState().zoom;
   return {
-    x: 500 - box.clientWidth / 2 + (clientX - r.left) - w / 2,
-    y: 500 - box.clientHeight / 2 + (clientY - r.top) - h / 2,
+    x: 500 + (clientX - r.left - box.clientWidth / 2) / zoom - w / 2,
+    y: 500 + (clientY - r.top - box.clientHeight / 2) / zoom - h / 2,
     w,
     h,
   };

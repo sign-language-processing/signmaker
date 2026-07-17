@@ -131,6 +131,7 @@ export function CanvasControls() {
   const shortcutsRef = useRef<HTMLDialogElement>(null);
   const tab = useUiStore((ui) => ui.tab);
   const shortcutsOpen = useUiStore((ui) => ui.shortcutsOpen);
+  const zoom = useUiStore((ui) => ui.zoom);
   const selectActive = useSelectModeStore((sm) => sm.active);
   // The arrow pad moves the selection — inert in select mode, or with nothing selected.
   const arrowsDisabled = selectActive || !s.list.some((sym) => sym.selected);
@@ -224,6 +225,29 @@ export function CanvasControls() {
           onMinus={() => s.fill(-1)}
           onPlus={() => s.fill(1)}
         />
+      </div>
+
+      <div className="canvas-tools zoom-control">
+        <input
+          type="range"
+          className="zoom-slider"
+          min={25}
+          max={400}
+          step={5}
+          value={Math.round(zoom * 100)}
+          onChange={(e) => useUiStore.getState().set({ zoom: Number(e.target.value) / 100 })}
+          aria-label={t('zoom')}
+        />
+        <button
+          type="button"
+          id="tool-zoomReset"
+          className="canvas-btn zoom-btn"
+          data-tip={tip(t, 'zoomReset')}
+          aria-label={tip(t, 'zoomReset')}
+          onClick={() => useUiStore.getState().set({ zoom: 1 })}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
       </div>
 
       <div className="arrow-pad">

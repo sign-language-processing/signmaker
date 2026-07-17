@@ -691,6 +691,14 @@ html,body {
   container-type: inline-size;
 }
 
+/* Scaled layer holding the grid, valid range, symbols, and guides — zoomed about the canvas
+   center so the (usually centered) sign stays put. Controls and the rubber band live outside. */
+.signbox-zoom {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+}
+
 /* Valid SignWriting placement region (symbol coordinates 250–749). */
 .valid-range {
   border: 1px dashed #cbd5e1;
@@ -836,6 +844,33 @@ html,body {
   border-color: #1e293b !important;
 }
 
+/* Canvas zoom: a tiny percentage button above the arrow pad; hovering (or focusing) it
+   slides out a native range slider. Clicking the button resets to 100%. */
+.zoom-control {
+  /* Above the arrow pad: 12px inset + two 34px rows + 4px gap + 8px breathing room. */
+  bottom: calc(12px + (2 * 34px) + 4px + 8px);
+  right: 12px;
+  z-index: 20;
+}
+.zoom-btn {
+  width: auto;
+  min-width: 34px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.zoom-slider {
+  width: 0;
+  opacity: 0;
+  accent-color: #1e293b;
+  transition: width 0.15s ease, opacity 0.15s ease;
+}
+.zoom-control:hover .zoom-slider,
+.zoom-control:focus-within .zoom-slider {
+  width: 110px;
+  opacity: 1;
+}
+
 .arrow-pad {
   bottom: 12px;
   right: 12px;
@@ -966,7 +1001,8 @@ html,body {
   right: 0; 
   margin:auto;
 }
-#signbox > div {
+#signbox > div,
+.signbox-zoom > div {
   position: absolute;
   cursor: default;
   -webkit-touch-callout: none;
@@ -976,12 +1012,14 @@ html,body {
   -ms-user-select: none;
   user-select: none;
 }
-#signbox > div > svg {
+#signbox > div > svg,
+.signbox-zoom > div > svg {
   display: block;
   top:0;
   left:0;
 }
-#signbox > div.selected svg g text.sym-line {
+#signbox > div.selected svg g text.sym-line,
+.signbox-zoom > div.selected svg g text.sym-line {
   fill: blue !important;
 }
 #command {

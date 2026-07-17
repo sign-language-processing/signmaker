@@ -17,6 +17,8 @@ export interface UiState {
   learnShortcuts: boolean;
   /** Transient: whether the keyboard-shortcuts editor dialog is open. */
   shortcutsOpen: boolean;
+  /** Canvas zoom factor (1 = 100%). Never persisted to the URL. */
+  zoom: number;
 
   size: string;
   pad: string;
@@ -41,6 +43,7 @@ export const useUiStore = create<UiState>((set) => ({
   paletteOpen: false,
   learnShortcuts: false,
   shortcutsOpen: false,
+  zoom: 1,
 
   size: '1',
   pad: '0',
