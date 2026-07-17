@@ -48,7 +48,7 @@ function IconButton({
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  tipPos?: 'right';
+  tipPos?: 'right' | 'bottom';
   children: ReactNode;
 }) {
   return (
@@ -69,13 +69,13 @@ function IconButton({
 
 /* A focusable section face: when the edit rail is collapsed it's the only visible part, and
    tapping it focuses the section so :focus-within expands the buttons (hover does it on desktop). */
-function SectionIcon({ Icon, label }: { Icon: ComponentType<SVGProps<SVGSVGElement>>; label: string }) {
+function SectionIcon({ Icon, label, tipPos }: { Icon: ComponentType<SVGProps<SVGSVGElement>>; label: string; tipPos?: 'right' | 'bottom' }) {
   return (
     <button
       type="button"
       className="edit-section-icon"
       data-tip={label}
-      data-tip-pos="right"
+      data-tip-pos={tipPos}
       aria-label={label}
       onClick={(e) => e.currentTarget.focus()}
     >
@@ -93,6 +93,7 @@ function StepSection({
   plusTip,
   onMinus,
   onPlus,
+  tipPos,
 }: {
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
   section: string;
@@ -102,14 +103,15 @@ function StepSection({
   plusTip: string;
   onMinus: () => void;
   onPlus: () => void;
+  tipPos?: 'right' | 'bottom';
 }) {
   return (
     <div className="edit-section">
-      <IconButton id={minusId} label={minusTip} tipPos="right" onClick={onMinus}>
+      <IconButton id={minusId} label={minusTip} tipPos={tipPos} onClick={onMinus}>
         <MinusIcon />
       </IconButton>
-      <SectionIcon Icon={Icon} label={section} />
-      <IconButton id={plusId} label={plusTip} tipPos="right" onClick={onPlus}>
+      <SectionIcon Icon={Icon} label={section} tipPos={tipPos} />
+      <IconButton id={plusId} label={plusTip} tipPos={tipPos} onClick={onPlus}>
         <PlusIcon />
       </IconButton>
     </div>
@@ -213,12 +215,14 @@ export function CanvasControls() {
       </div>
 
       <div className="canvas-tools canvas-edit">
+        {/* Tooltips go above for the top two sections and below for the bottom one, so they
+            never cover the buttons sliding out to the right of a collapsed section. */}
         <div className="edit-section">
-          <IconButton id="tool-rotateCCW" label={tip(t, 'rotateCCW')} tipPos="right" onClick={() => s.rotate(-1)}>
+          <IconButton id="tool-rotateCCW" label={tip(t, 'rotateCCW')} onClick={() => s.rotate(-1)}>
             <RotateCcwIcon />
           </IconButton>
           <SectionIcon Icon={RotateCwIcon} label={t('rotate')} />
-          <IconButton id="tool-rotateCW" label={tip(t, 'rotateCW')} tipPos="right" onClick={() => s.rotate(1)}>
+          <IconButton id="tool-rotateCW" label={tip(t, 'rotateCW')} onClick={() => s.rotate(1)}>
             <RotateCwIcon />
           </IconButton>
         </div>
@@ -241,6 +245,7 @@ export function CanvasControls() {
           plusTip={tip(t, 'fillNext')}
           onMinus={() => s.fill(-1)}
           onPlus={() => s.fill(1)}
+          tipPos="bottom"
         />
       </div>
 
