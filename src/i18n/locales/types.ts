@@ -56,6 +56,11 @@ export interface Messages {
   fingerspelling: string;
   mouthing: string;
   translate: string;
+  rotate: string;
+  zoom: string;
+  zoomIn: string;
+  zoomOut: string;
+  zoomReset: string;
   pickSignedLanguage: string;
   pickSpokenLanguage: string;
   mouthingUnavailable: string;

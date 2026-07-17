@@ -33,6 +33,11 @@ export interface Shortcut {
   keys?: string; // explicit display string for shortcuts the matcher doesn't drive (arrows, select mode)
 }
 
+const zoomBy = (factor: number) => {
+  const ui = useUiStore.getState();
+  ui.set({ zoom: ui.zoom * factor }); // the store clamps to its zoom bounds
+};
+
 export const SHORTCUTS: Shortcut[] = [
   { id: 'selectPrev', label: 'selectPrev', bindings: [[9, 'shiftKey']], tool: 'selectPrev', run: (s) => s.select(-1) },
   { id: 'selectNext', label: 'selectNext', bindings: [[9]], tool: 'selectNext', run: (s) => s.select(1) },
@@ -90,6 +95,9 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'selectAll', label: 'selectAll', bindings: [[65, 'metaKey'], [65, 'ctrlKey']], run: (s) => s.selectAll() },
   { id: 'export', label: 'export', bindings: [[69, 'metaKey'], [69, 'ctrlKey']], tool: 'export', run: (_s, ui) => ui.set({ tab: 'png' }) },
   { id: 'save', label: 'save', bindings: [[83, 'metaKey'], [83, 'ctrlKey']], run: () => save() },
+  { id: 'zoomIn', label: 'zoomIn', bindings: [['=', 'metaKey'], ['=', 'ctrlKey'], ['+', 'metaKey'], ['+', 'ctrlKey']], run: () => zoomBy(1.25) },
+  { id: 'zoomOut', label: 'zoomOut', bindings: [['-', 'metaKey'], ['-', 'ctrlKey']], run: () => zoomBy(1 / 1.25) },
+  { id: 'zoomReset', label: 'zoomReset', bindings: [[48, 'metaKey'], [48, 'ctrlKey']], run: (_s, ui) => ui.set({ zoom: 1 }) },
   {
     id: 'fingerspelling',
     label: 'fingerspelling',

@@ -94,8 +94,8 @@ const DraggableSymbol = memo(function DraggableSymbol({ sym, index, mid }: { sym
     onMove: ({ dx, dy }) => {
       const box = startBox.current;
       if (!box) return;
-      const desiredX = Math.round(dx);
-      const desiredY = Math.round(dy);
+      const desiredX = toUnits(dx);
+      const desiredY = toUnits(dy);
       const { dx: sdx, dy: sdy } = snapToGuides(shift(box, desiredX, desiredY), boxes.current);
       paint(Math.round(desiredX + sdx), Math.round(desiredY + sdy));
     },
@@ -113,9 +113,11 @@ const DraggableSymbol = memo(function DraggableSymbol({ sym, index, mid }: { sym
       } else {
         // Recompute from the release delta so the drop is exact even if the last frame's flush was
         // coalesced away by pointerup.
-        const { dx: sdx, dy: sdy } = snapToGuides(shift(box, Math.round(dx), Math.round(dy)), boxes.current);
+        const ux = toUnits(dx);
+        const uy = toUnits(dy);
+        const { dx: sdx, dy: sdy } = snapToGuides(shift(box, ux, uy), boxes.current);
         clearGuides();
-        store.nudge(Math.round(dx + sdx), Math.round(dy + sdy));
+        store.nudge(ux + sdx, uy + sdy);
         store.commit();
       }
     },
@@ -180,6 +182,9 @@ function Guides({ mid }: { mid: Mid }) {
   );
 }
 
+/** Pointer deltas are screen px; the symbol layer is scaled, so convert to symbol units. */
+const toUnits = (px: number): number => Math.round(px / useUiStore.getState().zoom);
+
 const CONTROL_SELECTOR = '.canvas-tools, .arrow-pad, .canvas-tooling, .tool-popover, dialog';
 
 export function SignBox() {
@@ -187,6 +192,7 @@ export function SignBox() {
   const selnone = useSignStore((s) => s.selnone);
   const selectIndices = useSignStore((s) => s.selectIndices);
   const grid = useUiStore((s) => s.grid);
+  const zoom = useUiStore((s) => s.zoom);
   const boxRef = useRef<HTMLDivElement>(null);
   const mid = useMid(boxRef, list);
   const [rubber, setRubber] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -215,12 +221,16 @@ export function SignBox() {
       const x1 = Math.max(sx, cx);
       const y1 = Math.max(sy, cy);
       setRubber({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+      // The rubber band lives in screen px; symbols live in the zoom layer (scaled about the box
+      // center), so map each symbol box to screen px before intersecting.
+      const zx = (v: number) => (v - r.width / 2) * zoom + r.width / 2;
+      const zy = (v: number) => (v - r.height / 2) * zoom + r.height / 2;
       const indices: number[] = [];
       list.forEach((s, i) => {
-        const left = s.x - 500 + mid.w;
-        const top = s.y - 500 + mid.h;
+        const left = zx(s.x - 500 + mid.w);
+        const top = zy(s.y - 500 + mid.h);
         const [w, h] = sizes[i];
-        if (!(left + w < x0 || left > x1 || top + h < y0 || top > y1)) indices.push(i);
+        if (!(left + w * zoom < x0 || left > x1 || top + h * zoom < y0 || top > y1)) indices.push(i);
       });
       selectIndices(indices);
       if (indices.length) useSelectModeStore.getState().exit(); // rubber-band selection leaves select mode
@@ -240,21 +250,28 @@ export function SignBox() {
     window.addEventListener('pointerup', up, { passive: true });
   };
 
+  // Collapse the edit rail only when it would overlap the 500-unit box: the box's left edge sits
+  // at clientW/2 - 250*zoom (scaled about the center), and the expanded rail needs ~120px
+  // (8px inset + widest section). Collapsed sections expand on hover/tap — see .edit-collapsed.
+  const editCollapsed = mid.clientW > 0 && mid.clientW / 2 - 250 * zoom < 120;
+
   return (
-    <div id="signbox" ref={boxRef} onPointerDown={onPointerDown}>
-      <div>
-        <Grid level={grid} mid={mid} />
+    <div id="signbox" ref={boxRef} className={editCollapsed ? 'edit-collapsed' : undefined} onPointerDown={onPointerDown}>
+      <div className="signbox-zoom" style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}>
+        <div>
+          <Grid level={grid} mid={mid} />
+        </div>
+        {mid.clientW > 0 && (
+          <div className="valid-range" style={{ left: mid.w - 250, top: mid.h - 250, width: 500, height: 500 }} />
+        )}
+        {list.map((sym, index) => (
+          // Key on the symbol value too: changing the glyph (mirror/rotate/…) remounts the
+          // element, giving a clean repaint instead of leaving a faint artifact of the old glyph.
+          <DraggableSymbol key={`${index}:${sym.key}`} sym={sym} index={index} mid={mid} />
+        ))}
+        <Guides mid={mid} />
       </div>
-      {mid.clientW > 0 && (
-        <div className="valid-range" style={{ left: mid.w - 250, top: mid.h - 250, width: 500, height: 500 }} />
-      )}
-      {list.map((sym, index) => (
-        // Key on the symbol value too: changing the glyph (mirror/rotate/…) remounts the
-        // element, giving a clean repaint instead of leaving a faint artifact of the old glyph.
-        <DraggableSymbol key={`${index}:${sym.key}`} sym={sym} index={index} mid={mid} />
-      ))}
       {rubber && <div className="rubber-band" style={{ left: rubber.x, top: rubber.y, width: rubber.w, height: rubber.h }} />}
-      <Guides mid={mid} />
       <CanvasControls />
       <CanvasTooling />
     </div>
