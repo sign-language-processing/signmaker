@@ -248,9 +248,10 @@ export function SignBox() {
     window.addEventListener('pointerup', up, { passive: true });
   };
 
-  // A narrow signbox or a zoomed-in canvas leaves no free room on the left, so the edit rail
-  // collapses to its section icons (they expand on hover/tap — see .edit-collapsed in index.css).
-  const editCollapsed = mid.clientW > 0 && (zoom > 1 || mid.clientW <= 740);
+  // Collapse the edit rail only when it would overlap the 500-unit box: the box's left edge sits
+  // at clientW/2 - 250*zoom (scaled about the center), and the expanded rail needs ~120px
+  // (8px inset + widest section). Collapsed sections expand on hover/tap — see .edit-collapsed.
+  const editCollapsed = mid.clientW > 0 && mid.clientW / 2 - 250 * zoom < 120;
 
   return (
     <div id="signbox" ref={boxRef} className={editCollapsed ? 'edit-collapsed' : undefined} onPointerDown={onPointerDown}>
