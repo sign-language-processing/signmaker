@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ComponentType, type PointerEvent, type ReactNode, type SVGProps } from 'react';
 import { useSignStore } from '../store/signStore';
-import { useUiStore } from '../store/uiStore';
+import { useUiStore, ZOOM_MIN, ZOOM_MAX } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
 import { useTranslation } from '../hooks/useTranslation';
 import { startMove, stopMove, type Direction } from '../lib/arrowRepeat';
@@ -118,6 +118,39 @@ function StepSection({
   );
 }
 
+/* Own component so slider drags re-render only this subtree, not every canvas control. */
+function ZoomControl() {
+  const { t } = useTranslation();
+  const zoom = useUiStore((ui) => ui.zoom);
+  return (
+    <div className="canvas-tools zoom-control">
+      <button
+        type="button"
+        id="tool-zoom"
+        className="canvas-btn zoom-btn"
+        data-tip={t('zoom')}
+        aria-label={t('zoom')}
+        // ponytail: no action — tapping only focuses the control so :focus-within reveals the
+        // slider on touch devices (iOS buttons don't focus on tap by themselves). ⌘0 resets.
+        onClick={(e) => e.currentTarget.focus()}
+      >
+        <ZoomIcon />
+        {Math.round(zoom * 100)}%
+      </button>
+      <input
+        type="range"
+        className="zoom-slider"
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        step={0.05}
+        value={zoom}
+        onChange={(e) => useUiStore.getState().set({ zoom: Number(e.target.value) })}
+        aria-label={t('zoom')}
+      />
+    </div>
+  );
+}
+
 function ArrowKey({ dir, label, disabled, children }: { dir: Direction; label: string; disabled?: boolean; children: ReactNode }) {
   const press = (e: PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -149,7 +182,6 @@ export function CanvasControls() {
   const shortcutsRef = useRef<HTMLDialogElement>(null);
   const tab = useUiStore((ui) => ui.tab);
   const shortcutsOpen = useUiStore((ui) => ui.shortcutsOpen);
-  const zoom = useUiStore((ui) => ui.zoom);
   const selectActive = useSelectModeStore((sm) => sm.active);
   // The arrow pad moves the selection — inert in select mode, or with nothing selected.
   const arrowsDisabled = selectActive || !s.list.some((sym) => sym.selected);
@@ -249,31 +281,7 @@ export function CanvasControls() {
         />
       </div>
 
-      <div className="canvas-tools zoom-control">
-        <button
-          type="button"
-          id="tool-zoom"
-          className="canvas-btn zoom-btn"
-          data-tip={t('zoom')}
-          aria-label={t('zoom')}
-          // ponytail: no action — tapping only focuses the control so :focus-within reveals the
-          // slider on touch devices (iOS buttons don't focus on tap by themselves). ⌘0 resets.
-          onClick={(e) => e.currentTarget.focus()}
-        >
-          <ZoomIcon />
-          {Math.round(zoom * 100)}%
-        </button>
-        <input
-          type="range"
-          className="zoom-slider"
-          min={100}
-          max={400}
-          step={5}
-          value={Math.round(zoom * 100)}
-          onChange={(e) => useUiStore.getState().set({ zoom: Number(e.target.value) / 100 })}
-          aria-label={t('zoom')}
-        />
-      </div>
+      <ZoomControl />
 
       <div className="arrow-pad">
         <ArrowKey dir="up" label={`${t('moveUp')} (↑)`} disabled={arrowsDisabled}>

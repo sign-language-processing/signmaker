@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 
+export const ZOOM_MIN = 1;
+export const ZOOM_MAX = 4;
+const clampZoom = (z: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
 const ZOOM_KEY = 'signmaker-zoom';
 
 function savedZoom(): number {
   try {
     const z = Number(localStorage.getItem(ZOOM_KEY));
-    return z >= 1 && z <= 4 ? z : 1;
+    return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
   } catch {
     return 1;
   }
@@ -63,8 +67,12 @@ export const useUiStore = create<UiState>((set) => ({
   back: '',
   colorize: false,
 
+  // Zoom is clamped here so every writer (slider, shortcuts, restore) shares one guard.
   set: (patch) => {
-    if (patch.zoom !== undefined) localStorage.setItem(ZOOM_KEY, String(patch.zoom));
+    if (patch.zoom !== undefined) {
+      patch = { ...patch, zoom: clampZoom(patch.zoom) };
+      localStorage.setItem(ZOOM_KEY, String(patch.zoom));
+    }
     set(patch);
   },
 }));

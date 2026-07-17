@@ -21,7 +21,7 @@ test.describe('Canvas zoom', () => {
     await expect(btn).toHaveText('100%');
 
     await btn.hover(); // the slider only slides out on hover/focus
-    await page.locator('.zoom-slider').fill('200');
+    await page.locator('.zoom-slider').fill('2');
     await expect(btn).toHaveText('200%');
     await expect(layer).toHaveCSS('transform', /matrix\(2,/);
 

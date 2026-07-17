@@ -32,12 +32,9 @@ export interface Shortcut {
   keys?: string; // explicit display string for shortcuts the matcher doesn't drive (arrows, select mode)
 }
 
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 4;
-export const clampZoom = (z: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 const zoomBy = (factor: number) => {
   const ui = useUiStore.getState();
-  ui.set({ zoom: clampZoom(ui.zoom * factor) });
+  ui.set({ zoom: ui.zoom * factor }); // the store clamps to its zoom bounds
 };
 
 export const SHORTCUTS: Shortcut[] = [

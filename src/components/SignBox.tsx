@@ -94,10 +94,8 @@ const DraggableSymbol = memo(function DraggableSymbol({ sym, index, mid }: { sym
     onMove: ({ dx, dy }) => {
       const box = startBox.current;
       if (!box) return;
-      // Pointer deltas are screen px; the symbol layer is scaled, so convert to symbol units.
-      const zoom = useUiStore.getState().zoom;
-      const desiredX = Math.round(dx / zoom);
-      const desiredY = Math.round(dy / zoom);
+      const desiredX = toUnits(dx);
+      const desiredY = toUnits(dy);
       const { dx: sdx, dy: sdy } = snapToGuides(shift(box, desiredX, desiredY), boxes.current);
       paint(Math.round(desiredX + sdx), Math.round(desiredY + sdy));
     },
@@ -115,10 +113,11 @@ const DraggableSymbol = memo(function DraggableSymbol({ sym, index, mid }: { sym
       } else {
         // Recompute from the release delta so the drop is exact even if the last frame's flush was
         // coalesced away by pointerup.
-        const zoom = useUiStore.getState().zoom;
-        const { dx: sdx, dy: sdy } = snapToGuides(shift(box, Math.round(dx / zoom), Math.round(dy / zoom)), boxes.current);
+        const ux = toUnits(dx);
+        const uy = toUnits(dy);
+        const { dx: sdx, dy: sdy } = snapToGuides(shift(box, ux, uy), boxes.current);
         clearGuides();
-        store.nudge(Math.round(dx / zoom + sdx), Math.round(dy / zoom + sdy));
+        store.nudge(ux + sdx, uy + sdy);
         store.commit();
       }
     },
@@ -182,6 +181,9 @@ function Guides({ mid }: { mid: Mid }) {
     </svg>
   );
 }
+
+/** Pointer deltas are screen px; the symbol layer is scaled, so convert to symbol units. */
+const toUnits = (px: number): number => Math.round(px / useUiStore.getState().zoom);
 
 const CONTROL_SELECTOR = '.canvas-tools, .arrow-pad, .canvas-tooling, .tool-popover, dialog';
 
