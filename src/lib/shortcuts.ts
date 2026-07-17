@@ -5,6 +5,7 @@ import { useLangStore } from '../store/langStore';
 import { useToolStore } from '../store/toolStore';
 import { usePaletteStore } from '../store/paletteStore';
 import { useShortcutStore } from '../store/shortcutStore';
+import { save } from './bridge';
 import { mouthingSupported } from '../i18n/languageNames';
 
 type SignState = ReturnType<typeof useSignStore.getState>;
@@ -87,7 +88,8 @@ export const SHORTCUTS: Shortcut[] = [
   },
   { id: 'under', label: 'sendToBack', bindings: [['{', 'metaKey'], ['{', 'ctrlKey']], run: (s) => s.under() },
   { id: 'selectAll', label: 'selectAll', bindings: [[65, 'metaKey'], [65, 'ctrlKey']], run: (s) => s.selectAll() },
-  { id: 'export', label: 'export', bindings: [[83, 'metaKey'], [83, 'ctrlKey']], tool: 'export', run: (_s, ui) => ui.set({ tab: 'png' }) },
+  { id: 'export', label: 'export', bindings: [[69, 'metaKey'], [69, 'ctrlKey']], tool: 'export', run: (_s, ui) => ui.set({ tab: 'png' }) },
+  { id: 'save', label: 'save', bindings: [[83, 'metaKey'], [83, 'ctrlKey']], run: () => save() },
   {
     id: 'fingerspelling',
     label: 'fingerspelling',
