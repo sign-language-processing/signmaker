@@ -807,8 +807,15 @@ html,body {
 /* Collapsed edit rail (narrow signbox or zoomed-in canvas — .edit-collapsed set by SignBox):
    each section shrinks to its center icon and stays on the left; hovering or tapping a section
    slides its buttons out, the same reveal mechanic as the zoom control. */
+.edit-collapsed .canvas-edit {
+  align-items: flex-start;
+}
 .edit-collapsed .edit-section {
   gap: 0;
+}
+/* The icon leads when collapsed, so the buttons slide out to its right without shifting it. */
+.edit-collapsed .edit-section .edit-section-icon {
+  order: -1;
 }
 .edit-collapsed .edit-section .canvas-btn {
   width: 0;
