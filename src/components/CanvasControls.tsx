@@ -66,6 +66,23 @@ function IconButton({
   );
 }
 
+/* A focusable section face: when the edit rail is collapsed it's the only visible part, and
+   tapping it focuses the section so :focus-within expands the buttons (hover does it on desktop). */
+function SectionIcon({ Icon, label }: { Icon: ComponentType<SVGProps<SVGSVGElement>>; label: string }) {
+  return (
+    <button
+      type="button"
+      className="edit-section-icon"
+      data-tip={label}
+      data-tip-pos="right"
+      aria-label={label}
+      onClick={(e) => e.currentTarget.focus()}
+    >
+      <Icon />
+    </button>
+  );
+}
+
 function StepSection({
   Icon,
   section,
@@ -90,9 +107,7 @@ function StepSection({
       <IconButton id={minusId} label={minusTip} tipPos="right" onClick={onMinus}>
         <MinusIcon />
       </IconButton>
-      <span className="edit-section-icon" data-tip={section} data-tip-pos="right">
-        <Icon />
-      </span>
+      <SectionIcon Icon={Icon} label={section} />
       <IconButton id={plusId} label={plusTip} tipPos="right" onClick={onPlus}>
         <PlusIcon />
       </IconButton>
@@ -201,6 +216,7 @@ export function CanvasControls() {
           <IconButton id="tool-rotateCCW" label={tip(t, 'rotateCCW')} tipPos="right" onClick={() => s.rotate(-1)}>
             <RotateCcwIcon />
           </IconButton>
+          <SectionIcon Icon={RotateCwIcon} label={t('rotate')} />
           <IconButton id="tool-rotateCW" label={tip(t, 'rotateCW')} tipPos="right" onClick={() => s.rotate(1)}>
             <RotateCwIcon />
           </IconButton>

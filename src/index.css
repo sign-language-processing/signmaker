@@ -766,6 +766,9 @@ html,body {
   justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #94a3b8;
 }
 .canvas-btn {
@@ -801,40 +804,29 @@ html,body {
   .canvas-tools-right .canvas-divider { display: none; }
 }
 
-/* On a narrow signbox the centered 500-unit box reaches the left edge, so the vertically-centered
-   edit controls would sit on top of it. Lift them into a horizontal row above the box. Hug the box
-   when there's room, but on a short signbox the box top sits near the top edge, so clamp the band
-   below the (possibly folded two-row) corner clusters to keep it off the undo/redo/delete buttons. */
-@container (max-width: 740px) {
-  .canvas-edit {
-    /* The 500px valid box is vertically centered, so its top edge is half its height above center. */
-    --box-top: calc(50% - (500px / 2));
-    /* Bottom of the folded corner clusters: 8px inset + two 34px button rows + 4px gap + breathing room. */
-    --corner-tools-bottom: calc(8px + (2 * 34px) + 4px + 12px);
-    /* Tallest the wrapped band gets: two 42px edit sections + the 8px gap between them, plus slack. */
-    --band-height: calc((2 * 42px) + 8px + 4px);
-
-    left: 0;
-    right: 0;
-    top: max(var(--corner-tools-bottom), calc(var(--box-top) - var(--band-height)));
-    transform: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    pointer-events: none; /* the full-width band stays click-through; only the controls are interactive */
-  }
-  .canvas-edit .edit-section {
-    pointer-events: auto;
-  }
+/* Collapsed edit rail (narrow signbox or zoomed-in canvas — .edit-collapsed set by SignBox):
+   each section shrinks to its center icon and stays on the left; hovering or tapping a section
+   slides its buttons out, the same reveal mechanic as the zoom control. */
+.edit-collapsed .edit-section {
+  gap: 0;
 }
-
-/* Too narrow to fit all three control groups in one row: rotation gets its own row, with
-   variation + fill paired on the next (never one group per row). */
-@container (max-width: 340px) {
-  .canvas-edit .edit-section:first-child {
-    flex-basis: 100%;
-    justify-content: center;
-  }
+.edit-collapsed .edit-section .canvas-btn {
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  border-width: 0;
+  overflow: hidden;
+  transition: width 0.15s ease, opacity 0.15s ease;
+}
+.edit-collapsed .edit-section:hover,
+.edit-collapsed .edit-section:focus-within {
+  gap: 4px;
+}
+.edit-collapsed .edit-section:hover .canvas-btn,
+.edit-collapsed .edit-section:focus-within .canvas-btn {
+  width: 34px;
+  opacity: 1;
+  border-width: 1px;
 }
 
 /* Keyboard-triggered "as if pressed" flash for any control button. */

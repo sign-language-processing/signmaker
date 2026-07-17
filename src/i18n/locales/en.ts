@@ -54,6 +54,7 @@ const en: Messages = {
   fingerspelling: 'Fingerspelling',
   mouthing: 'Mouthing',
   translate: 'Translate',
+  rotate: 'Rotate',
   zoom: 'Zoom',
   zoomIn: 'Zoom In',
   zoomOut: 'Zoom Out',
