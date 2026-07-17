@@ -228,16 +228,6 @@ export function CanvasControls() {
       </div>
 
       <div className="canvas-tools zoom-control">
-        <input
-          type="range"
-          className="zoom-slider"
-          min={25}
-          max={400}
-          step={5}
-          value={Math.round(zoom * 100)}
-          onChange={(e) => useUiStore.getState().set({ zoom: Number(e.target.value) / 100 })}
-          aria-label={t('zoom')}
-        />
         <button
           type="button"
           id="tool-zoomReset"
@@ -248,6 +238,16 @@ export function CanvasControls() {
         >
           {Math.round(zoom * 100)}%
         </button>
+        <input
+          type="range"
+          className="zoom-slider"
+          min={100}
+          max={400}
+          step={5}
+          value={Math.round(zoom * 100)}
+          onChange={(e) => useUiStore.getState().set({ zoom: Number(e.target.value) / 100 })}
+          aria-label={t('zoom')}
+        />
       </div>
 
       <div className="arrow-pad">

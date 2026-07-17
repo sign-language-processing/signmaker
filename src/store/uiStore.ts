@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
+const ZOOM_KEY = 'signmaker-zoom';
+
+function savedZoom(): number {
+  try {
+    const z = Number(localStorage.getItem(ZOOM_KEY));
+    return z >= 1 && z <= 4 ? z : 1;
+  } catch {
+    return 1;
+  }
+}
+
 export type Tab = '' | 'more' | 'png' | 'svg';
 export type Skin = '' | 'inverse' | 'colorful';
 
@@ -17,7 +28,7 @@ export interface UiState {
   learnShortcuts: boolean;
   /** Transient: whether the keyboard-shortcuts editor dialog is open. */
   shortcutsOpen: boolean;
-  /** Canvas zoom factor (1 = 100%). Never persisted to the URL. */
+  /** Canvas zoom factor (1 = 100%). Remembered in localStorage, never in the URL. */
   zoom: number;
 
   size: string;
@@ -43,7 +54,7 @@ export const useUiStore = create<UiState>((set) => ({
   paletteOpen: false,
   learnShortcuts: false,
   shortcutsOpen: false,
-  zoom: 1,
+  zoom: savedZoom(),
 
   size: '1',
   pad: '0',
@@ -52,5 +63,8 @@ export const useUiStore = create<UiState>((set) => ({
   back: '',
   colorize: false,
 
-  set: (patch) => set(patch),
+  set: (patch) => {
+    if (patch.zoom !== undefined) localStorage.setItem(ZOOM_KEY, String(patch.zoom));
+    set(patch);
+  },
 }));

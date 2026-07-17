@@ -17,6 +17,8 @@ test.describe('Canvas zoom', () => {
 
     await page.keyboard.press('Meta+-');
     await expect(btn).toHaveText('100%');
+    await page.keyboard.press('Meta+-'); // 100% is the floor
+    await expect(btn).toHaveText('100%');
 
     await btn.hover(); // the slider only slides out on hover/focus
     await page.locator('.zoom-slider').fill('200');
@@ -27,5 +29,15 @@ test.describe('Canvas zoom', () => {
     await page.locator('#signbox').click({ position: { x: 30, y: 300 } });
     await page.keyboard.press('Meta+0');
     await expect(btn).toHaveText('100%');
+  });
+
+  test('zoom level is remembered across reloads', async ({ page }) => {
+    await page.goto(`/index.html#?fsw=${encoded}`);
+    await waitForApp(page);
+    await page.keyboard.press('Meta+=');
+    await expect(page.locator('#tool-zoomReset')).toHaveText('125%');
+    await page.reload();
+    await waitForApp(page);
+    await expect(page.locator('#tool-zoomReset')).toHaveText('125%');
   });
 });
