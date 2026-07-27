@@ -33,6 +33,9 @@ function show(target: HTMLElement): void {
   if (pos === 'right') {
     left = r.right + 8;
     top = r.top + r.height / 2 - bubble.offsetHeight / 2;
+  } else if (pos === 'bottom') {
+    left = r.left + r.width / 2 - bubble.offsetWidth / 2;
+    top = r.bottom + 6;
   } else if (pos === 'between') {
     // Straddle the cell's top edge — half above the row line, half below — so it reads as sitting in
     // the gap without floating above the whole palette or covering the hovered symbol.

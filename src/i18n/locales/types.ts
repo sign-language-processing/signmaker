@@ -56,6 +56,11 @@ export interface Messages {
   fingerspelling: string;
   mouthing: string;
   translate: string;
+  rotate: string;
+  zoom: string;
+  zoomIn: string;
+  zoomOut: string;
+  zoomReset: string;
   pickSignedLanguage: string;
   pickSpokenLanguage: string;
   mouthingUnavailable: string;
@@ -73,4 +78,20 @@ export interface Messages {
   moveDown: string;
   moveLeft: string;
   moveRight: string;
+
+  deselect: string;
+  flipPalette: string;
+  sendToBack: string;
+  selectAll: string;
+  expandTools: string;
+  collapseTools: string;
+  copySign: string;
+  signCopied: string;
+  pasteSign: string;
+  moveSelection: string;
+  keyboardShortcuts: string;
+  edit: string;
+  reset: string;
+  resetAll: string;
+  pressKeys: string;
 }

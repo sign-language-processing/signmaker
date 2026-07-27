@@ -12,6 +12,7 @@ import { staticBoxes, boxOf, type Box } from '../lib/snap';
 import { snapToGuides, clearGuides } from '../lib/guides';
 import { activateSymbol } from '../lib/palette';
 import { showTooltip } from '../lib/tooltip';
+import { tip } from '../lib/shortcuts';
 import { useSymbolSvg } from '../hooks/useGlyph';
 import { HomeIcon, SaveIcon } from './icons';
 
@@ -30,9 +31,11 @@ function dropAnchor(symbolKey: string, clientX: number, clientY: number): { x: n
   if (!box || !pointInElement('signbox', clientX, clientY)) return null;
   const r = box.getBoundingClientRect();
   const [w, h] = symbolSize(symbolKey);
+  // The symbol layer is scaled about the box center, so unscale the pointer's offset from it.
+  const zoom = useUiStore.getState().zoom;
   return {
-    x: 500 - box.clientWidth / 2 + (clientX - r.left) - w / 2,
-    y: 500 - box.clientHeight / 2 + (clientY - r.top) - h / 2,
+    x: 500 + (clientX - r.left - box.clientWidth / 2) / zoom - w / 2,
+    y: 500 + (clientY - r.top - box.clientHeight / 2) / zoom - h / 2,
     w,
     h,
   };
@@ -45,11 +48,13 @@ const PaletteCell = memo(function PaletteCell({ symbolKey, tooltip, focused }: {
   const boxes = useRef<Box[]>([]);
   const snapOffset = useRef({ dx: 0, dy: 0 });
 
-  const positionGhost = (clientX: number, clientY: number) => {
+  const positionGhost = (clientX: number, clientY: number, scale: number) => {
     const [w, h] = symbolSize(symbolKey);
     if (!ghost.current) ghost.current = makeGhost(symbolKey);
     ghost.current.style.left = `${clientX - w / 2}px`;
     ghost.current.style.top = `${clientY - h / 2}px`;
+    // Preview at the canvas zoom while over the signbox (translateZ keeps the compositing layer).
+    ghost.current.style.transform = `translateZ(0) scale(${scale})`;
   };
 
   const onPointerDown = useDrag({
@@ -62,13 +67,15 @@ const PaletteCell = memo(function PaletteCell({ symbolKey, tooltip, focused }: {
       // First dragging move: collapse the mobile palette drawer so the canvas is exposed for the drop.
       if (!ghost.current) useUiStore.getState().set({ paletteOpen: false });
       const anchor = dropAnchor(symbolKey, clientX, clientY);
+      const zoom = anchor ? useUiStore.getState().zoom : 1;
       if (anchor) {
         snapOffset.current = snapToGuides(boxOf(anchor.x, anchor.y, anchor.w, anchor.h), boxes.current);
       } else {
         snapOffset.current = { dx: 0, dy: 0 };
         clearGuides();
       }
-      positionGhost(clientX + snapOffset.current.dx, clientY + snapOffset.current.dy);
+      // Snap offsets are in symbol units; the ghost lives in screen px, so scale them by the zoom.
+      positionGhost(clientX + snapOffset.current.dx * zoom, clientY + snapOffset.current.dy * zoom, zoom);
     },
     onEnd: ({ clientX, clientY, moved }) => {
       ghost.current?.remove();
@@ -164,7 +171,7 @@ export function Palette() {
             </>
           )}
         </nav>
-        <button type="button" className="palette-save" onClick={save}>
+        <button type="button" className="palette-save" onClick={save} data-tip={tip(t, 'save')}>
           <SaveIcon />
           {t('save')}
         </button>

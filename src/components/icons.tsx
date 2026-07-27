@@ -158,6 +158,14 @@ export const FillIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const ZoomIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M21 21l-4.5-4.5" />
+    <path d="M8 11h6M11 8v6" />
+  </svg>
+);
+
 export const MinusIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M5 12h14" />

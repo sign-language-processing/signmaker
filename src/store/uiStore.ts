@@ -1,5 +1,20 @@
 import { create } from 'zustand';
 
+export const ZOOM_MIN = 1;
+export const ZOOM_MAX = 4;
+const clampZoom = (z: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
+const ZOOM_KEY = 'signmaker-zoom';
+
+function savedZoom(): number {
+  try {
+    const z = Number(localStorage.getItem(ZOOM_KEY));
+    return z >= ZOOM_MIN && z <= ZOOM_MAX ? z : 1;
+  } catch {
+    return 1;
+  }
+}
+
 export type Tab = '' | 'more' | 'png' | 'svg';
 export type Skin = '' | 'inverse' | 'colorful';
 
@@ -13,6 +28,14 @@ export interface UiState {
   tab: Tab;
   /** Mobile only: whether the palette overlay drawer is open. */
   paletteOpen: boolean;
+  /** Transient: hold ⌘/Ctrl alone to reveal every tool's keyboard shortcut. Never persisted to the URL. */
+  learnShortcuts: boolean;
+  /** Transient: whether the keyboard-shortcuts editor dialog is open. */
+  shortcutsOpen: boolean;
+  /** Transient: i18n key of the canvas toast to show, '' for none. */
+  toast: string;
+  /** Canvas zoom factor (1 = 100%). Remembered in localStorage, never in the URL. */
+  zoom: number;
 
   size: string;
   pad: string;
@@ -35,6 +58,10 @@ export const useUiStore = create<UiState>((set) => ({
   skin: '',
   tab: '',
   paletteOpen: false,
+  learnShortcuts: false,
+  shortcutsOpen: false,
+  toast: '',
+  zoom: savedZoom(),
 
   size: '1',
   pad: '0',
@@ -43,5 +70,12 @@ export const useUiStore = create<UiState>((set) => ({
   back: '',
   colorize: false,
 
-  set: (patch) => set(patch),
+  // Zoom is clamped here so every writer (slider, shortcuts, restore) shares one guard.
+  set: (patch) => {
+    if (patch.zoom !== undefined) {
+      patch = { ...patch, zoom: clampZoom(patch.zoom) };
+      localStorage.setItem(ZOOM_KEY, String(patch.zoom));
+    }
+    set(patch);
+  },
 }));

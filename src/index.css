@@ -1,23 +1,24 @@
 @import "tailwindcss";
 
-/* SignWriting fonts shipped by @sutton-signwriting/font-ttf (bundled by Vite); layout ported from legacy/index.css. */
+/* SignWriting fonts as WOFF2 (converted from @sutton-signwriting/font-ttf, ~76% smaller than the
+   shipped TTFs). To regenerate after a font-ttf bump: woff2_compress each font/*.ttf into src/fonts/. */
 @font-face {
   font-family: "SuttonSignWritingLine";
   src:
     local('SuttonSignWritingLine'),
-    url('@sutton-signwriting/font-ttf/font/SuttonSignWritingLine.ttf') format('truetype');
+    url('./fonts/SuttonSignWritingLine.woff2') format('woff2');
 }
 @font-face {
   font-family: "SuttonSignWritingFill";
   src:
     local('SuttonSignWritingFill'),
-    url('@sutton-signwriting/font-ttf/font/SuttonSignWritingFill.ttf') format('truetype');
+    url('./fonts/SuttonSignWritingFill.woff2') format('woff2');
 }
 @font-face {
   font-family: "SuttonSignWritingOneD";
   src:
     local('SuttonSignWritingOneD'),
-    url('@sutton-signwriting/font-ttf/font/SuttonSignWritingOneD.ttf') format('truetype');
+    url('./fonts/SuttonSignWritingOneD.woff2') format('woff2');
 }
 svg {
   overflow: visible;
@@ -37,6 +38,152 @@ svg {
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+/* Shortcut sheet: a temporary, read-only list of every shortcut shown while ⌘/Ctrl is held. */
+.shortcut-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+}
+.shortcut-sheet {
+  max-height: 80vh;
+  overflow-y: auto;
+  max-width: min(640px, 92vw);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #fff;
+  color: #1e293b;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  pointer-events: auto; /* clickable (e.g. the Edit button) even though the backdrop isn't */
+}
+.shortcut-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.shortcut-sheet h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.shortcut-edit {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.shortcut-edit:hover {
+  background: #f1f5f9;
+}
+
+/* Keyboard-shortcuts editor */
+.shortcuts-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.shortcuts-reset-all {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.shortcuts-list {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.25rem 0.25rem 0;
+}
+.shortcut-edit-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0;
+}
+.shortcut-edit-label {
+  font-size: 0.9rem;
+}
+.shortcut-key-btn {
+  min-width: 4rem;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font: 600 0.78rem ui-monospace, monospace;
+  cursor: pointer;
+}
+.shortcut-key-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+.shortcut-key-btn.recording {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+.shortcut-key-btn:disabled {
+  color: #94a3b8;
+  cursor: default;
+}
+.shortcut-reset {
+  border: none;
+  background: none;
+  font-size: 1rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+.shortcut-reset:hover:not(:disabled) {
+  color: #1e293b;
+}
+.shortcut-reset:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.shortcut-sheet dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 1.5rem;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.2rem 0;
+}
+.shortcut-row dt {
+  font-size: 0.85rem;
+}
+.shortcut-row dd {
+  margin: 0;
+}
+.shortcut-row kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #1e293b;
+  color: #fff;
+  font: 600 0.72rem ui-monospace, monospace;
+  text-align: center;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .shortcut-sheet dl {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ASL tooltips/labels are SignWriting signs (black on transparent) — show on white. */
 .tip-bubble.tip-sign {
   background: #fff;
@@ -544,6 +691,14 @@ html,body {
   container-type: inline-size;
 }
 
+/* Scaled layer holding the grid, valid range, symbols, and guides — zoomed about the canvas
+   center so the (usually centered) sign stays put. Controls and the rubber band live outside. */
+.signbox-zoom {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+}
+
 /* Valid SignWriting placement region (symbol coordinates 250–749). */
 .valid-range {
   border: 1px dashed #cbd5e1;
@@ -611,6 +766,9 @@ html,body {
   justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #94a3b8;
 }
 .canvas-btn {
@@ -646,40 +804,63 @@ html,body {
   .canvas-tools-right .canvas-divider { display: none; }
 }
 
-/* On a narrow signbox the centered 500-unit box reaches the left edge, so the vertically-centered
-   edit controls would sit on top of it. Lift them into a horizontal row above the box. Hug the box
-   when there's room, but on a short signbox the box top sits near the top edge, so clamp the band
-   below the (possibly folded two-row) corner clusters to keep it off the undo/redo/delete buttons. */
-@container (max-width: 740px) {
-  .canvas-edit {
-    /* The 500px valid box is vertically centered, so its top edge is half its height above center. */
-    --box-top: calc(50% - (500px / 2));
-    /* Bottom of the folded corner clusters: 8px inset + two 34px button rows + 4px gap + breathing room. */
-    --corner-tools-bottom: calc(8px + (2 * 34px) + 4px + 12px);
-    /* Tallest the wrapped band gets: two 42px edit sections + the 8px gap between them, plus slack. */
-    --band-height: calc((2 * 42px) + 8px + 4px);
-
-    left: 0;
-    right: 0;
-    top: max(var(--corner-tools-bottom), calc(var(--box-top) - var(--band-height)));
-    transform: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    pointer-events: none; /* the full-width band stays click-through; only the controls are interactive */
-  }
-  .canvas-edit .edit-section {
-    pointer-events: auto;
-  }
+/* Collapsed edit rail (narrow signbox or zoomed-in canvas — .edit-collapsed set by SignBox):
+   each section shrinks to its center icon and stays on the left; hovering or tapping a section
+   slides its buttons out, the same reveal mechanic as the zoom control. */
+.edit-collapsed .canvas-edit {
+  align-items: flex-start;
+}
+.edit-collapsed .edit-section {
+  gap: 0;
+}
+/* The icon leads when collapsed, so the buttons slide out to its right without shifting it. */
+.edit-collapsed .edit-section .edit-section-icon {
+  order: -1;
+}
+.edit-collapsed .edit-section .canvas-btn {
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  border-width: 0;
+  overflow: hidden;
+  transition: width 0.15s ease, opacity 0.15s ease;
+}
+.edit-collapsed .edit-section:hover,
+.edit-collapsed .edit-section:focus-within {
+  gap: 4px;
+}
+.edit-collapsed .edit-section:hover .canvas-btn,
+.edit-collapsed .edit-section:focus-within .canvas-btn {
+  width: 34px;
+  opacity: 1;
+  border-width: 1px;
 }
 
-/* Too narrow to fit all three control groups in one row: rotation gets its own row, with
-   variation + fill paired on the next (never one group per row). */
-@container (max-width: 340px) {
-  .canvas-edit .edit-section:first-child {
-    flex-basis: 100%;
-    justify-content: center;
-  }
+/* The pin toggle holds every section open, so the rail doesn't need a hover per section.
+   It only exists while collapsed — expanded, there is nothing to pin. */
+.edit-pin { display: none; }
+.edit-collapsed .edit-pin { display: flex; }
+.edit-collapsed .canvas-edit.pinned .edit-section { gap: 4px; }
+.edit-collapsed .canvas-edit.pinned .canvas-btn {
+  width: 34px;
+  opacity: 1;
+  border-width: 1px;
+}
+
+/* Transient canvas confirmation (⌘C), centered near the top of the signbox. */
+.canvas-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  pointer-events: none;
 }
 
 /* Keyboard-triggered "as if pressed" flash for any control button. */
@@ -687,6 +868,34 @@ html,body {
   background: #1e293b !important;
   color: #fff !important;
   border-color: #1e293b !important;
+}
+
+/* Canvas zoom: a tiny percentage button just above the bottom-left tooling row; hovering
+   (or focusing) it slides out a native range slider to its right. The button resets to 100%. */
+.zoom-control {
+  /* Above the tooling row: 12px inset + one 34px button row + 8px breathing room. */
+  bottom: calc(12px + 34px + 8px);
+  left: 12px;
+  z-index: 25;
+}
+.zoom-btn {
+  width: auto;
+  min-width: 34px;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.zoom-slider {
+  width: 0;
+  opacity: 0;
+  accent-color: #1e293b;
+  transition: width 0.15s ease, opacity 0.15s ease;
+}
+.zoom-control:hover .zoom-slider,
+.zoom-control:focus-within .zoom-slider {
+  width: 110px;
+  opacity: 1;
 }
 
 .arrow-pad {
@@ -819,7 +1028,8 @@ html,body {
   right: 0; 
   margin:auto;
 }
-#signbox > div {
+#signbox > div,
+.signbox-zoom > div {
   position: absolute;
   cursor: default;
   -webkit-touch-callout: none;
@@ -829,12 +1039,14 @@ html,body {
   -ms-user-select: none;
   user-select: none;
 }
-#signbox > div > svg {
+#signbox > div > svg,
+.signbox-zoom > div > svg {
   display: block;
   top:0;
   left:0;
 }
-#signbox > div.selected svg g text.sym-line {
+#signbox > div.selected svg g text.sym-line,
+.signbox-zoom > div.selected svg g text.sym-line {
   fill: blue !important;
 }
 #command {
@@ -923,7 +1135,8 @@ html,body {
 
 /* Export dialog */
 .export-dialog,
-.settings-dialog {
+.settings-dialog,
+.shortcuts-dialog {
   position: relative; /* containing block for the copied-to-clipboard toast */
   margin: auto; /* restore the modal centering Tailwind's preflight margin reset removes */
   border: none;
@@ -934,8 +1147,11 @@ html,body {
 }
 .settings-dialog { width: min(440px, 92vw); max-height: 85vh; overflow: auto; }
 .settings-dialog .more-grid { padding: 1.25rem; }
+.shortcuts-dialog { width: min(460px, 92vw); max-height: 85vh; overflow: auto; }
+.shortcuts-dialog .shortcuts-list { padding: 0.75rem 1.25rem 1.25rem; }
 .export-dialog::backdrop,
-.settings-dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
+.settings-dialog::backdrop,
+.shortcuts-dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
 .export-header {
   display: flex;
   align-items: center;

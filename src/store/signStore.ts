@@ -36,6 +36,7 @@ interface SignState {
   fswnorm: () => string;
   swulive: () => string;
   swunorm: () => string;
+  swuselection: () => string;
 
   addhistory: () => void;
   setFromFsw: (fsw: string) => void;
@@ -83,6 +84,13 @@ export const useSignStore = create<SignState>((set, get) => ({
   swulive: () => sign.swulive(get().signbox, get().sort, get().list),
   swunorm: () => sign.swunorm(get().signbox, get().sort, get().list),
 
+  // What ⌘C puts on the clipboard: the selected symbols alone, or the whole sign when nothing is
+  // selected. A partial copy drops the sort prefix — it describes the full sign, not a subset.
+  swuselection: () => {
+    const selected = get().list.filter((s) => s.selected);
+    return selected.length ? sign.swulive(get().signbox, [], selected) : get().swulive();
+  },
+
   addhistory: () => {
     const { list, sort, history, cursor } = get();
     const next = snapshot(list, sort);
@@ -129,16 +137,18 @@ export const useSignStore = create<SignState>((set, get) => ({
     get().addhistory();
   },
 
-  selnone: () => set({ list: get().list.map((s) => ({ ...s, selected: false })) }),
+  // Keep the reference of any symbol whose selected flag doesn't change, so memoized symbols that
+  // weren't (de)selected skip re-rendering — selection stays O(changed), not O(list).
+  selnone: () => set({ list: get().list.map((s) => (s.selected ? { ...s, selected: false } : s)) }),
 
-  selectAll: () => set({ list: get().list.map((s) => ({ ...s, selected: true })) }),
+  selectAll: () => set({ list: get().list.map((s) => (s.selected ? s : { ...s, selected: true })) }),
 
   selectOnly: (index) =>
-    set({ list: get().list.map((s, i) => ({ ...s, selected: i === index })) }),
+    set({ list: get().list.map((s, i) => (s.selected === (i === index) ? s : { ...s, selected: i === index })) }),
 
   selectIndices: (indices) => {
     const chosen = new Set(indices);
-    set({ list: get().list.map((s, i) => ({ ...s, selected: chosen.has(i) })) });
+    set({ list: get().list.map((s, i) => (s.selected === chosen.has(i) ? s : { ...s, selected: chosen.has(i) })) });
   },
 
   select: (step) => {
