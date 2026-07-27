@@ -79,3 +79,12 @@ export const useUiStore = create<UiState>((set) => ({
     set(patch);
   },
 }));
+
+let toastTimer: number | undefined;
+
+/** Flash a transient canvas message (i18n key). Later calls replace the one on screen. */
+export function toast(key: string): void {
+  useUiStore.getState().set({ toast: key });
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => useUiStore.getState().set({ toast: '' }), 1500);
+}

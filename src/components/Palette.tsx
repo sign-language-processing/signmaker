@@ -128,6 +128,7 @@ export function Palette() {
   const selectActive = useSelectModeStore((s) => s.active);
   const cursorRow = useSelectModeStore((s) => s.row);
   const cursorCol = useSelectModeStore((s) => s.col);
+  const saveable = useSignStore((s) => s.saveable());
 
   const tooltipPrefix = base ? '' : group ? 'base_' : 'group_';
   const atTop = !group && !base;
@@ -171,7 +172,13 @@ export function Palette() {
             </>
           )}
         </nav>
-        <button type="button" className="palette-save" onClick={save} data-tip={tip(t, 'save')}>
+        <button
+          type="button"
+          className="palette-save"
+          onClick={save}
+          aria-disabled={!saveable}
+          data-tip={saveable ? tip(t, 'save') : t('tooLargeToSave')}
+        >
           <SaveIcon />
           {t('save')}
         </button>
