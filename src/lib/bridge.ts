@@ -1,5 +1,5 @@
 import { useSignStore } from '../store/signStore';
-import { useUiStore, UI_DEFAULTS, type Skin, type Tab, type UiState } from '../store/uiStore';
+import { useUiStore, toast, UI_DEFAULTS, type Skin, type Tab, type UiState } from '../store/uiStore';
 import { useI18nStore } from '../store/i18nStore';
 import { parseHash, pushHash } from './url';
 
@@ -84,6 +84,7 @@ export function currentParams(): Record<string, string> {
 
 export function save(): void {
   const sign = useSignStore.getState();
+  if (!sign.saveable()) return toast('tooLargeToSave');
   if (isIframe) {
     window.parent.postMessage(
       { signmaker: 'save', swu: sign.swunorm(), fsw: sign.fswnorm() },

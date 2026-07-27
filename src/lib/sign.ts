@@ -1,5 +1,5 @@
 import { fsw as fontFsw } from '@sutton-signwriting/font-ttf';
-import { convert, style as coreStyle } from '@sutton-signwriting/core';
+import { convert, style as coreStyle, swu as coreSwu } from '@sutton-signwriting/core';
 
 export type Signbox = 'M' | 'L' | 'R' | 'B';
 
@@ -39,6 +39,20 @@ export const symbolSize = (key: string): [number, number] => {
   }
 };
 export const fsw2swu = (text: string): string => convert.fsw2swu(text);
+
+/**
+ * True when every character of an SWU string is a legal SignWriting codepoint in a legal slot.
+ * Only 250–749 has coordinate characters, so a coordinate outside that lane silently encodes as a
+ * *number* character instead — a string that still looks like SignWriting but no longer parses.
+ * Parse-then-recompose is the cheapest total check: anything malformed fails to round-trip.
+ */
+export const isValidSwu = (text: string): boolean => {
+  try {
+    return !!text && coreSwu.compose.sign(coreSwu.parse.sign(text)) === text;
+  } catch {
+    return false;
+  }
+};
 export const swu2fsw = (text: string): string => convert.swu2fsw(text);
 
 /** font-ttf transforms can throw at a symbol's variant boundary; keep the key on failure. */

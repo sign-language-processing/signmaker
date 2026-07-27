@@ -85,6 +85,7 @@ const en: Messages = {
   collapseTools: 'Collapse tools',
   copySign: 'Copy sign',
   signCopied: 'Sign copied',
+  tooLargeToSave: 'Sign is too large after being centered',
   pasteSign: 'Paste sign',
   moveSelection: 'Move selection',
   keyboardShortcuts: 'Keyboard shortcuts',
