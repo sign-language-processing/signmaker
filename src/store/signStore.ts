@@ -36,6 +36,7 @@ interface SignState {
   fswnorm: () => string;
   swulive: () => string;
   swunorm: () => string;
+  swuselection: () => string;
 
   addhistory: () => void;
   setFromFsw: (fsw: string) => void;
@@ -82,6 +83,13 @@ export const useSignStore = create<SignState>((set, get) => ({
   fswnorm: () => sign.fswnorm(get().signbox, get().sort, get().list),
   swulive: () => sign.swulive(get().signbox, get().sort, get().list),
   swunorm: () => sign.swunorm(get().signbox, get().sort, get().list),
+
+  // What ⌘C puts on the clipboard: the selected symbols alone, or the whole sign when nothing is
+  // selected. A partial copy drops the sort prefix — it describes the full sign, not a subset.
+  swuselection: () => {
+    const selected = get().list.filter((s) => s.selected);
+    return selected.length ? sign.swulive(get().signbox, [], selected) : get().swulive();
+  },
 
   addhistory: () => {
     const { list, sort, history, cursor } = get();

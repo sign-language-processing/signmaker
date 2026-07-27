@@ -32,6 +32,8 @@ export interface UiState {
   learnShortcuts: boolean;
   /** Transient: whether the keyboard-shortcuts editor dialog is open. */
   shortcutsOpen: boolean;
+  /** Transient: i18n key of the canvas toast to show, '' for none. */
+  toast: string;
   /** Canvas zoom factor (1 = 100%). Remembered in localStorage, never in the URL. */
   zoom: number;
 
@@ -58,6 +60,7 @@ export const useUiStore = create<UiState>((set) => ({
   paletteOpen: false,
   learnShortcuts: false,
   shortcutsOpen: false,
+  toast: '',
   zoom: savedZoom(),
 
   size: '1',

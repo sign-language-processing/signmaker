@@ -836,6 +836,33 @@ html,body {
   border-width: 1px;
 }
 
+/* The pin toggle holds every section open, so the rail doesn't need a hover per section.
+   It only exists while collapsed — expanded, there is nothing to pin. */
+.edit-pin { display: none; }
+.edit-collapsed .edit-pin { display: flex; }
+.edit-collapsed .canvas-edit.pinned .edit-section { gap: 4px; }
+.edit-collapsed .canvas-edit.pinned .canvas-btn {
+  width: 34px;
+  opacity: 1;
+  border-width: 1px;
+}
+
+/* Transient canvas confirmation (⌘C), centered near the top of the signbox. */
+.canvas-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  pointer-events: none;
+}
+
 /* Keyboard-triggered "as if pressed" flash for any control button. */
 .is-pressed {
   background: #1e293b !important;

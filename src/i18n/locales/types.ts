@@ -83,6 +83,11 @@ export interface Messages {
   flipPalette: string;
   sendToBack: string;
   selectAll: string;
+  expandTools: string;
+  collapseTools: string;
+  copySign: string;
+  signCopied: string;
+  pasteSign: string;
   moveSelection: string;
   keyboardShortcuts: string;
   edit: string;

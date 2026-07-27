@@ -12,6 +12,8 @@ const PREVENT = [8, 9];
 const ARROWS: Record<number, Direction> = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
 // Palette-grid cursor deltas for select mode (row, col).
 const GRID_MOVE: Record<number, [number, number]> = { 37: [0, -1], 38: [-1, 0], 39: [0, 1], 40: [1, 0] };
+// The SignWriting plane — pasted text only counts as a sign if it contains SWU characters.
+const SWU = /[\u{1D800}-\u{1DAAF}]/u;
 
 /** Map a digit keyCode to a palette row: 1–9 → rows 0–8, 0 → row 9. Returns -1 for non-digits. */
 function digitRow(code: number): number {
@@ -133,13 +135,42 @@ export function useKeyboard(): void {
       stopAllMoves();
     };
 
+    // ⌘C/⌘V ride the browser's own copy/paste events rather than a keydown binding: no clipboard
+    // permission prompt, no async read, and text selection inside inputs/dialogs still copies natively.
+    const clipboardBusy = (event: ClipboardEvent) => isTyping(event.target) || !!document.querySelector('dialog[open]');
+    let toastTimer: number | undefined;
+
+    const onCopy = (event: ClipboardEvent) => {
+      if (clipboardBusy(event)) return;
+      const swu = useSignStore.getState().swuselection();
+      if (!swu) return;
+      event.clipboardData?.setData('text/plain', swu);
+      event.preventDefault();
+      useUiStore.getState().set({ toast: 'signCopied' });
+      clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => useUiStore.getState().set({ toast: '' }), 1500);
+    };
+
+    const onPaste = (event: ClipboardEvent) => {
+      if (clipboardBusy(event)) return;
+      const text = event.clipboardData?.getData('text/plain').trim();
+      if (!text || !SWU.test(text)) return;
+      useSignStore.getState().addSign(text); // parseSign converts SWU; addSign selects what it added
+      event.preventDefault();
+    };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('copy', onCopy);
+    window.addEventListener('paste', onPaste);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
+      window.removeEventListener('copy', onCopy);
+      window.removeEventListener('paste', onPaste);
+      clearTimeout(toastTimer);
       cancelLearn();
     };
   }, []);
