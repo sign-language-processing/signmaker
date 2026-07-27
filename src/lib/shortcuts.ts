@@ -125,7 +125,10 @@ export const SHORTCUTS: Shortcut[] = [
     },
   },
   // Display-only entries: handled by dedicated code in useKeyboard, listed here so the registry is the
-  // complete catalogue of shortcuts.
+  // complete catalogue of shortcuts. copySwu/paste keep bindings (never matched, since they have no
+  // `run`) purely so the sheet renders the platform's modifier glyph.
+  { id: 'copySwu', label: 'copySign', bindings: [[67, 'metaKey'], [67, 'ctrlKey']] },
+  { id: 'paste', label: 'pasteSign', bindings: [[86, 'metaKey'], [86, 'ctrlKey']] },
   { id: 'move', label: 'moveSelection', bindings: [], keys: '↑ ↓ ← →' },
   { id: 'select', label: 'select', bindings: [], keys: 'S' },
 ];

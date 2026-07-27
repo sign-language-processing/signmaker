@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType, type PointerEvent, type ReactNode, type SVGProps } from 'react';
+import { useEffect, useRef, useState, type ComponentType, type PointerEvent, type ReactNode, type SVGProps } from 'react';
 import { useSignStore } from '../store/signStore';
 import { useUiStore, ZOOM_MIN, ZOOM_MAX } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
@@ -42,6 +42,7 @@ function IconButton({
   onClick,
   disabled,
   tipPos,
+  className,
   children,
 }: {
   id: string;
@@ -49,13 +50,14 @@ function IconButton({
   onClick: () => void;
   disabled?: boolean;
   tipPos?: 'right' | 'bottom';
+  className?: string;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       id={id}
-      className="canvas-btn"
+      className={className ? `canvas-btn ${className}` : 'canvas-btn'}
       data-tip={label}
       data-tip-pos={tipPos}
       aria-label={label}
@@ -182,7 +184,9 @@ export function CanvasControls() {
   const shortcutsRef = useRef<HTMLDialogElement>(null);
   const tab = useUiStore((ui) => ui.tab);
   const shortcutsOpen = useUiStore((ui) => ui.shortcutsOpen);
+  const toast = useUiStore((ui) => ui.toast);
   const selectActive = useSelectModeStore((sm) => sm.active);
+  const [pinned, setPinned] = useState(false);
   // The arrow pad moves the selection — inert in select mode, or with nothing selected.
   const arrowsDisabled = selectActive || !s.list.some((sym) => sym.selected);
   useLightDismiss(confirmRef);
@@ -246,7 +250,17 @@ export function CanvasControls() {
         </IconButton>
       </div>
 
-      <div className="canvas-tools canvas-edit">
+      <div className={`canvas-tools canvas-edit${pinned ? ' pinned' : ''}`}>
+        {/* Only visible while the rail is collapsed (CSS): pins the sections open instead of
+            requiring a hover/tap on each one. */}
+        <IconButton
+          id="tool-pinEdit"
+          className="edit-pin"
+          label={t(pinned ? 'collapseTools' : 'expandTools')}
+          onClick={() => setPinned(!pinned)}
+        >
+          {pinned ? <ChevronLeft /> : <ChevronRight />}
+        </IconButton>
         {/* Tooltips go above for the top two sections and below for the bottom one, so they
             never cover the buttons sliding out to the right of a collapsed section. */}
         <div className="edit-section">
@@ -280,6 +294,12 @@ export function CanvasControls() {
           tipPos="bottom"
         />
       </div>
+
+      {toast && (
+        <div className="canvas-toast" role="status">
+          {t(toast)}
+        </div>
+      )}
 
       <ZoomControl />
 

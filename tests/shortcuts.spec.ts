@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp } from './support';
+import { waitForApp, fswlive, symbolCount, vm } from './support';
+
+const SWU = /[\u{1D800}-\u{1DAAF}]/u;
 
 test.describe('shortcut sheet', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,5 +30,43 @@ test.describe('shortcut sheet', () => {
     await page.keyboard.up('Meta');
     await page.waitForTimeout(2200);
     await expect(page.locator('.shortcut-sheet')).toHaveCount(0);
+  });
+});
+
+test.describe('clipboard', () => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/index.html');
+    await waitForApp(page);
+  });
+
+  test('copies the sign as SWU and pastes it back, selecting what was pasted', async ({ page }) => {
+    await vm(page, 'add', { key: 'S10000', x: 500, y: 500 });
+
+    await page.keyboard.press('ControlOrMeta+c');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(SWU);
+    await expect(page.locator('.canvas-toast')).toHaveText('Sign copied');
+    await expect(page.locator('.canvas-toast')).toHaveCount(0, { timeout: 3000 });
+
+    await page.keyboard.press('ControlOrMeta+v');
+    expect(symbolCount(await fswlive(page))).toBe(2);
+    await expect(page.locator('#signbox .signbox-symbol.selected')).toHaveCount(1);
+  });
+
+  test('copies only the selected symbols when a subset is selected', async ({ page }) => {
+    await vm(page, 'add', { key: 'S10000', x: 480, y: 480 });
+    await vm(page, 'add', { key: 'S10011', x: 520, y: 520 });
+    await vm(page, 'select', -1); // the second add left symbol 1 selected; step back to symbol 0
+
+    await page.keyboard.press('ControlOrMeta+c');
+    await page.keyboard.press('ControlOrMeta+v');
+    expect(symbolCount(await fswlive(page))).toBe(3); // the two originals + one pasted, not four
+    await expect(page.locator('#signbox .signbox-symbol.selected')).toHaveCount(1);
+  });
+
+  test('ignores a paste that is not SignWriting', async ({ page }) => {
+    await page.evaluate(() => navigator.clipboard.writeText('just some text'));
+    await page.keyboard.press('ControlOrMeta+v');
+    expect(await fswlive(page)).toBe('');
   });
 });
