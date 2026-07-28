@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef } from 'react';
 import { usePaletteStore } from '../store/paletteStore';
-import { useSignStore } from '../store/signStore';
+import { useSignStore, useSaveable } from '../store/signStore';
 import { useUiStore } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
 import { useTranslation } from '../hooks/useTranslation';
@@ -128,7 +128,7 @@ export function Palette() {
   const selectActive = useSelectModeStore((s) => s.active);
   const cursorRow = useSelectModeStore((s) => s.row);
   const cursorCol = useSelectModeStore((s) => s.col);
-  const saveable = useSignStore((s) => s.saveable());
+  const saveable = useSaveable();
 
   const tooltipPrefix = base ? '' : group ? 'base_' : 'group_';
   const atTop = !group && !base;

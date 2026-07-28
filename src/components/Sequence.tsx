@@ -1,4 +1,4 @@
-import { useSignStore } from '../store/signStore';
+import { useSignStore, useSaveable } from '../store/signStore';
 import { useSymbolSvg } from '../hooks/useGlyph';
 import { useDrag, seqPosition } from '../hooks/useDrag';
 import { useTranslation } from '../hooks/useTranslation';
@@ -20,7 +20,7 @@ function SortItem({ symbolKey }: { symbolKey: string }) {
 export function Sequence() {
   const { t } = useTranslation();
   const sort = useSignStore((s) => s.sort);
-  const saveable = useSignStore((s) => s.saveable());
+  const saveable = useSaveable();
   return (
     <div id="sequence">
       {/* Mobile only (CSS-hidden on desktop): the palette Save is unreachable while the drawer is closed. */}
