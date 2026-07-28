@@ -66,6 +66,28 @@ test.describe('save validity', () => {
     expect(page.url()).toBe(before);
   });
 
+  // Regression: saveability is derived from glyph sizes, which font-ttf can only measure once the
+  // SignWriting fonts load — before that an oversized sign measures as fitting. The button used to
+  // keep that first, wrong answer forever. Invisible on a machine with the fonts installed (local()
+  // resolves with no download), so the cold path is forced here.
+  test('a cold, slow font load does not leave Save stuck enabled', async ({ page }) => {
+    await page.route('**/main-*.css', async (route) => {
+      const res = await route.fetch();
+      const css = (await res.text()).replace(/local\(SuttonSignWriting\w+\),?/g, '');
+      await route.fulfill({ response: res, body: css });
+    });
+    await page.route('**/*.woff2', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await route.continue();
+    });
+
+    await page.goto(`/index.html#?fsw=${encodeURIComponent(OVERFLOWS_WHEN_CENTERED)}`);
+    await waitForApp(page);
+
+    await expect(saveButton(page)).toHaveAttribute('aria-disabled', 'true');
+    expect(isSwu(await swunorm(page))).toBe(false);
+  });
+
   test('shrinking the sign re-enables save', async ({ page }) => {
     await page.goto(`/index.html#?fsw=${encodeURIComponent(OVERFLOWS_WHEN_CENTERED)}`);
     await waitForApp(page);
