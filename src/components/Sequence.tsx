@@ -1,7 +1,8 @@
-import { useSignStore, useSaveable } from '../store/signStore';
+import { useSignStore } from '../store/signStore';
 import { useSymbolSvg } from '../hooks/useGlyph';
 import { useDrag, seqPosition } from '../hooks/useDrag';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSaveable } from '../hooks/useSaveable';
 import { save } from '../lib/bridge';
 import { SaveIcon } from './icons';
 

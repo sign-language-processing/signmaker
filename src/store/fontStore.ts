@@ -25,8 +25,9 @@ export const useFontStore = create<FontState>(() => ({ ready: false }));
  * triggers @font-face loading, and the empty glyph output means no DOM text
  * triggers it either. So we load them explicitly. `ready` is flipped in `finally`
  * so a failed font load degrades to the fallback glyph rather than leaving the UI
- * blank. Cached and locally-installed fonts resolve within a frame, so returning
- * visitors see no placeholder.
+ * blank. Cached and locally-installed fonts still resolve a tick later, not
+ * synchronously, so there is always one painted frame of empty glyphs — for them
+ * it is a frame, not a download.
  */
 export async function ensureSignWritingFonts(): Promise<void> {
   if (!document.fonts) {

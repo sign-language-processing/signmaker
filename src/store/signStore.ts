@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { useFontStore } from './fontStore';
 import * as sign from '../lib/sign';
 import type { Signbox, Sym } from '../lib/sign';
 
@@ -361,15 +360,3 @@ export const useSignStore = create<SignState>((set, get) => ({
     });
   },
 }));
-
-/**
- * Saveability for the UI. Glyph sizes come from font-ttf's canvas measuring, which throws until the
- * SignWriting fonts load — before that `fswnorm` falls back to the un-normalized sign, so an
- * oversized sign measures as fitting. Subscribing to font readiness re-renders (and so recomputes)
- * once the measurements are real; until then Save stays enabled rather than flashing disabled.
- */
-export function useSaveable(): boolean {
-  const ready = useFontStore((s) => s.ready);
-  const saveable = useSignStore((s) => s.saveable());
-  return !ready || saveable;
-}

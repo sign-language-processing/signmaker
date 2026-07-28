@@ -1,9 +1,10 @@
 import { memo, useEffect, useRef } from 'react';
 import { usePaletteStore } from '../store/paletteStore';
-import { useSignStore, useSaveable } from '../store/signStore';
+import { useSignStore } from '../store/signStore';
 import { useUiStore } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSaveable } from '../hooks/useSaveable';
 import { useDrag, pointInElement, seqPosition } from '../hooks/useDrag';
 import { save } from '../lib/bridge';
 import { SYMBOL_NAMES } from '../i18n/symbolNames';
