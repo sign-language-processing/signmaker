@@ -75,7 +75,17 @@ function LanguagePopover() {
   );
 }
 
-async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', text: string, signed: string, spoken: string, signal: AbortSignal): Promise<string> {
+type TextTool = 'fingerspelling' | 'mouthing' | 'translate' | 'search';
+interface Result {
+  fsw: string;
+  tip?: string; // entry terms for search results; generated signs use the default tip
+}
+
+async function generateResults(tool: TextTool, text: string, signed: string, spoken: string, signal: AbortSignal): Promise<Result[]> {
+  if (tool === 'search') {
+    const entries = await searchPuddle(puddleFor(signed), text, signal);
+    return entries.map((e) => ({ fsw: signNormalize(swu2fsw(e.sign)), tip: e.terms.join(', ') }));
+  }
   if (tool === 'translate') {
     const token = await recaptchaToken('api_request');
     const res = await fetch(`${TRANSLATE_API}/`, {
@@ -88,7 +98,7 @@ async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', te
     const fsw = data.output?.[0] || '';
     // The model emits a placeholder M500x500 box; recompute it from the actual
     // glyph extents so the svg (and addSign placement) get the real size.
-    return fsw && signNormalize(fsw);
+    return fsw ? [{ fsw: signNormalize(fsw) }] : [];
   }
   const url =
     tool === 'fingerspelling'
@@ -96,14 +106,25 @@ async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', te
       : `${API}/mouthing?text=${encodeURIComponent(text)}&spoken_language=${spokenApiCode(spoken)}`;
   const res = await fetch(url, { signal });
   const data = (await res.json()) as { fsw?: string };
-  return data.fsw || '';
+  return data.fsw ? [{ fsw: data.fsw }] : [];
 }
 
-function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing' | 'translate'; onClose: () => void }) {
+const PLACEHOLDER: Record<TextTool, 'wordToFingerspell' | 'wordToMouth' | 'textToTranslate' | 'wordToSearch'> = {
+  fingerspelling: 'wordToFingerspell',
+  mouthing: 'wordToMouth',
+  translate: 'textToTranslate',
+  search: 'wordToSearch',
+};
+
+function ResultButton({ fsw, tip, onPick }: { fsw: string; tip: string; onPick: () => void }) {
+  const svg = useSignSvg(fsw);
+  return <button type="button" className="tool-use" data-tip={tip} aria-label={tip} onClick={onPick} dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => void }) {
   const [text, setText] = useState('');
-  const [fsw, setFsw] = useState('');
+  const [results, setResults] = useState<Result[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
-  const preview = useSignSvg(fsw);
   const inputRef = useRef<HTMLInputElement>(null);
   const addSign = useSignStore((s) => s.addSign);
   const { signed, spoken } = useLangStore();
@@ -111,94 +132,10 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
 
   useEffect(() => {
     inputRef.current?.focus();
-    warmUp(tool === 'translate' ? TRANSLATE_API : API);
+    if (tool !== 'search') warmUp(tool === 'translate' ? TRANSLATE_API : API);
   }, [tool]);
 
   // Keyed on the trimmed text so whitespace-only edits don't abort and re-fire the request.
-  const trimmed = text.trim();
-  useEffect(() => {
-    if (!trimmed) {
-      setFsw('');
-      setStatus('idle');
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setStatus('loading');
-      try {
-        const result = await generateFsw(tool, trimmed, signed, spoken, controller.signal);
-        setFsw(result);
-        setStatus(result ? 'idle' : 'empty');
-      } catch {
-        if (!controller.signal.aborted) {
-          setFsw('');
-          setStatus('empty');
-        }
-      }
-    }, DEBOUNCE_MS);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [trimmed, tool, signed, spoken]);
-
-  const accept = () => {
-    if (!fsw) return;
-    addSign(fsw);
-    onClose();
-  };
-
-  return (
-    <div className="tool-popover">
-      <input
-        ref={inputRef}
-        className="tool-input"
-        placeholder={tool === 'fingerspelling' ? t('wordToFingerspell') : tool === 'mouthing' ? t('wordToMouth') : t('textToTranslate')}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            accept();
-          }
-        }}
-      />
-      <div className="tool-result">
-        {status === 'loading' && <span className="tool-hint">…</span>}
-        {status === 'empty' && <span className="tool-hint">{t('noResult')}</span>}
-        {status === 'idle' && fsw && (
-          <button
-            type="button"
-            className="tool-use"
-            data-tip={t('addToCanvas')}
-            aria-label={t('addToCanvas')}
-            onClick={accept}
-            dangerouslySetInnerHTML={{ __html: preview }}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SearchResult({ fsw, tip, onPick }: { fsw: string; tip: string; onPick: () => void }) {
-  const svg = useSignSvg(fsw);
-  return <button type="button" className="tool-use" data-tip={tip} aria-label={tip} onClick={onPick} dangerouslySetInnerHTML={{ __html: svg }} />;
-}
-
-function SearchPopover({ onClose }: { onClose: () => void }) {
-  const [text, setText] = useState('');
-  const [results, setResults] = useState<{ fsw: string; terms: string[] }[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const addSign = useSignStore((s) => s.addSign);
-  const signed = useLangStore((s) => s.signed);
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
   const trimmed = text.trim();
   useEffect(() => {
     if (!trimmed) {
@@ -210,8 +147,7 @@ function SearchPopover({ onClose }: { onClose: () => void }) {
     const timer = setTimeout(async () => {
       setStatus('loading');
       try {
-        const entries = await searchPuddle(puddleFor(signed), trimmed, controller.signal);
-        const found = entries.map((e) => ({ fsw: signNormalize(swu2fsw(e.sign)), terms: e.terms }));
+        const found = await generateResults(tool, trimmed, signed, spoken, controller.signal);
         setResults(found);
         setStatus(found.length ? 'idle' : 'empty');
       } catch {
@@ -225,7 +161,7 @@ function SearchPopover({ onClose }: { onClose: () => void }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [trimmed, signed]);
+  }, [trimmed, tool, signed, spoken]);
 
   const pick = (fsw: string) => {
     addSign(fsw);
@@ -237,7 +173,7 @@ function SearchPopover({ onClose }: { onClose: () => void }) {
       <input
         ref={inputRef}
         className="tool-input"
-        placeholder={t('wordToSearch')}
+        placeholder={t(PLACEHOLDER[tool])}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -247,11 +183,11 @@ function SearchPopover({ onClose }: { onClose: () => void }) {
           }
         }}
       />
-      <div className="tool-result tool-results">
+      <div className={`tool-result${tool === 'search' && status === 'idle' && results.length ? ' tool-results' : ''}`}>
         {status === 'loading' && <span className="tool-hint">…</span>}
         {status === 'empty' && <span className="tool-hint">{t('noResult')}</span>}
         {status === 'idle' &&
-          results.map((r, i) => <SearchResult key={i} fsw={r.fsw} tip={r.terms.join(', ') || t('addToCanvas')} onPick={() => pick(r.fsw)} />)}
+          results.map((r, i) => <ResultButton key={i} fsw={r.fsw} tip={r.tip || t('addToCanvas')} onPick={() => pick(r.fsw)} />)}
       </div>
     </div>
   );
@@ -314,10 +250,7 @@ export function CanvasTooling() {
   return (
     <div className="canvas-tooling" ref={ref}>
       {open === 'language' && <LanguagePopover />}
-      {(open === 'fingerspelling' || open === 'mouthing' || open === 'translate') && (
-        <GeneratePopover tool={open} onClose={() => setOpen(null)} />
-      )}
-      {open === 'search' && <SearchPopover onClose={() => setOpen(null)} />}
+      {open && open !== 'language' && <GeneratePopover tool={open} onClose={() => setOpen(null)} />}
       <div className="tooling-buttons">
         <ToolButton tool="language" label={t('languages')} Icon={LanguageIcon} open={open === 'language'} onToggle={() => toggle('language')} />
         <ToolButton
