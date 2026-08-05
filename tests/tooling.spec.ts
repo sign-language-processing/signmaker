@@ -56,4 +56,33 @@ test.describe('language tooling', () => {
     expect(recaptchaToken).toBe('test-token');
     await expect(page.locator('#signbox .signbox-symbol')).toHaveCount(2);
   });
+
+  test('search lists SignPuddle results and adds one to the canvas', async ({ page }) => {
+    let searchUrl = '';
+    await page.route('https://signpuddle.com/server/**', (route) => {
+      searchUrl = route.request().url();
+      return route.fulfill({
+        json: {
+          total: 2,
+          data: [
+            { sign: '𝠃𝤘𝤣񁲡𝣳𝣩񈩧𝤉𝣻', terms: ['hello'] },
+            { sign: '𝠃𝤘𝤣񁲡𝣳𝣩񈩧𝤉𝣻', terms: ['hello there'] },
+          ],
+        },
+      });
+    });
+
+    await expect(page.locator('[data-tool=search]')).toBeDisabled();
+    await page.locator('[data-tool=language]').click();
+    await page.locator('.tool-field select').nth(1).selectOption('ase');
+    await page.locator('[data-tool=language]').click();
+
+    await page.locator('[data-tool=search]').click();
+    await page.locator('.tool-input').fill('hello');
+    await expect(page.locator('.tool-use')).toHaveCount(2);
+    expect(searchUrl).toContain('/dictionary/ase-US-dictionary-public/search/terms/hello');
+
+    await page.locator('.tool-use').first().click();
+    await expect(page.locator('#signbox .signbox-symbol')).toHaveCount(2);
+  });
 });

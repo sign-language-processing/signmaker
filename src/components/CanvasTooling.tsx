@@ -5,11 +5,12 @@ import { useToolStore, type Tool } from '../store/toolStore';
 import { useTranslation } from '../hooks/useTranslation';
 import { IANASignedLanguages } from '../i18n/ianaLanguages';
 import { signedLanguageName, spokenLanguageName, spokenApiCode, mouthingSupported } from '../i18n/languageNames';
-import { signNormalize } from '../lib/sign';
+import { signNormalize, swu2fsw } from '../lib/sign';
+import { puddleFor, searchPuddle } from '../lib/signpuddle';
 import { useSignSvg } from '../hooks/useGlyph';
 import { recaptchaToken } from '../lib/recaptcha';
 import { apiDomain } from '../lib/api';
-import { LanguageIcon, HandIcon, MouthIcon, TranslateIcon } from './icons';
+import { LanguageIcon, HandIcon, MouthIcon, TranslateIcon, SearchIcon } from './icons';
 
 const API = `https://signwriting.${apiDomain}`;
 const TRANSLATE_API = `https://sw-translation.${apiDomain}`;
@@ -180,6 +181,82 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
   );
 }
 
+function SearchResult({ fsw, tip, onPick }: { fsw: string; tip: string; onPick: () => void }) {
+  const svg = useSignSvg(fsw);
+  return <button type="button" className="tool-use" data-tip={tip} aria-label={tip} onClick={onPick} dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+function SearchPopover({ onClose }: { onClose: () => void }) {
+  const [text, setText] = useState('');
+  const [results, setResults] = useState<{ fsw: string; terms: string[] }[]>([]);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const addSign = useSignStore((s) => s.addSign);
+  const signed = useLangStore((s) => s.signed);
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const trimmed = text.trim();
+  useEffect(() => {
+    if (!trimmed) {
+      setResults([]);
+      setStatus('idle');
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setStatus('loading');
+      try {
+        const entries = await searchPuddle(puddleFor(signed), trimmed, controller.signal);
+        const found = entries.map((e) => ({ fsw: signNormalize(swu2fsw(e.sign)), terms: e.terms }));
+        setResults(found);
+        setStatus(found.length ? 'idle' : 'empty');
+      } catch {
+        if (!controller.signal.aborted) {
+          setResults([]);
+          setStatus('empty');
+        }
+      }
+    }, DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [trimmed, signed]);
+
+  const pick = (fsw: string) => {
+    addSign(fsw);
+    onClose();
+  };
+
+  return (
+    <div className="tool-popover">
+      <input
+        ref={inputRef}
+        className="tool-input"
+        placeholder={t('wordToSearch')}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && results.length) {
+            e.preventDefault();
+            pick(results[0].fsw);
+          }
+        }}
+      />
+      <div className="tool-result tool-results">
+        {status === 'loading' && <span className="tool-hint">…</span>}
+        {status === 'empty' && <span className="tool-hint">{t('noResult')}</span>}
+        {status === 'idle' &&
+          results.map((r, i) => <SearchResult key={i} fsw={r.fsw} tip={r.terms.join(', ') || t('addToCanvas')} onPick={() => pick(r.fsw)} />)}
+      </div>
+    </div>
+  );
+}
+
 function ToolButton({
   tool,
   label,
@@ -240,6 +317,7 @@ export function CanvasTooling() {
       {(open === 'fingerspelling' || open === 'mouthing' || open === 'translate') && (
         <GeneratePopover tool={open} onClose={() => setOpen(null)} />
       )}
+      {open === 'search' && <SearchPopover onClose={() => setOpen(null)} />}
       <div className="tooling-buttons">
         <ToolButton tool="language" label={t('languages')} Icon={LanguageIcon} open={open === 'language'} onToggle={() => toggle('language')} />
         <ToolButton
@@ -277,6 +355,14 @@ export function CanvasTooling() {
           disabled={!signed || !spoken}
           open={open === 'translate'}
           onToggle={() => toggle('translate')}
+        />
+        <ToolButton
+          tool="search"
+          label={puddleFor(signed) ? `${t('search')} (L)` : `${t('search')} — ${t('pickSignedLanguage')}`}
+          Icon={SearchIcon}
+          disabled={!puddleFor(signed)}
+          open={open === 'search'}
+          onToggle={() => toggle('search')}
         />
       </div>
     </div>

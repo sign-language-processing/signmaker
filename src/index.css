@@ -997,6 +997,7 @@ html,body {
 }
 .tool-use { border: none; background: none; cursor: pointer; padding: 6px; }
 .tool-use svg { max-height: 90px; max-width: 200px; }
+.tool-results { flex-wrap: wrap; justify-content: flex-start; max-height: 40vh; overflow-y: auto; }
 .tool-clear {
   align-self: flex-end;
   border: 1px solid #cbd5e1;
