@@ -9,6 +9,7 @@ import { signNormalize, swu2fsw } from '../lib/sign';
 import { puddleFor, searchPuddle } from '../lib/signpuddle';
 import { useSignSvg } from '../hooks/useGlyph';
 import { recaptchaToken } from '../lib/recaptcha';
+import { tip } from '../lib/shortcuts';
 import { apiDomain } from '../lib/api';
 import { LanguageIcon, HandIcon, MouthIcon, TranslateIcon, SearchIcon } from './icons';
 
@@ -75,7 +76,7 @@ function LanguagePopover() {
   );
 }
 
-type TextTool = 'fingerspelling' | 'mouthing' | 'translate' | 'search';
+type TextTool = Exclude<Tool, 'language'>;
 interface Result {
   fsw: string;
   tip?: string; // entry terms for search results; generated signs use the default tip
@@ -84,7 +85,9 @@ interface Result {
 async function generateResults(tool: TextTool, text: string, signed: string, spoken: string, signal: AbortSignal): Promise<Result[]> {
   if (tool === 'search') {
     const entries = await searchPuddle(puddleFor(signed), text, signal);
-    return entries.map((e) => ({ fsw: signNormalize(swu2fsw(e.sign)), tip: e.terms.join(', ') }));
+    // Puddle entries carry real signboxes (unlike translate's placeholder), so they
+    // render fine as-is; pick() normalizes the one sign that reaches the canvas.
+    return entries.map((e) => ({ fsw: swu2fsw(e.sign), tip: e.terms.join(', ') }));
   }
   if (tool === 'translate') {
     const token = await recaptchaToken('api_request');
@@ -112,11 +115,11 @@ async function generateResults(tool: TextTool, text: string, signed: string, spo
   return data.fsw ? [{ fsw: data.fsw }] : [];
 }
 
-const PLACEHOLDER: Record<TextTool, 'wordToFingerspell' | 'wordToMouth' | 'textToTranslate' | 'wordToSearch'> = {
-  fingerspelling: 'wordToFingerspell',
-  mouthing: 'wordToMouth',
-  translate: 'textToTranslate',
-  search: 'wordToSearch',
+const TOOLS: Record<TextTool, { placeholder: string; warm?: string }> = {
+  fingerspelling: { placeholder: 'wordToFingerspell', warm: API },
+  mouthing: { placeholder: 'wordToMouth', warm: API },
+  translate: { placeholder: 'textToTranslate', warm: TRANSLATE_API },
+  search: { placeholder: 'wordToSearch' },
 };
 
 function ResultButton({ fsw, tip, selected, onPick }: { fsw: string; tip: string; selected: boolean; onPick: () => void }) {
@@ -150,7 +153,8 @@ function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => voi
 
   useEffect(() => {
     inputRef.current?.focus();
-    if (tool !== 'search') warmUp(tool === 'translate' ? TRANSLATE_API : API);
+    const { warm } = TOOLS[tool];
+    if (warm) warmUp(warm);
   }, [tool]);
 
   // Keyed on the trimmed text so whitespace-only edits don't abort and re-fire the request.
@@ -183,7 +187,7 @@ function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => voi
   }, [trimmed, tool, signed, spoken]);
 
   const pick = (fsw: string) => {
-    addSign(fsw);
+    addSign(signNormalize(fsw));
     onClose();
   };
 
@@ -192,7 +196,7 @@ function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => voi
       <input
         ref={inputRef}
         className="tool-input"
-        placeholder={t(PLACEHOLDER[tool])}
+        placeholder={t(TOOLS[tool].placeholder)}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -253,6 +257,7 @@ export function CanvasTooling() {
   const ref = useRef<HTMLDivElement>(null);
   const { signed, spoken } = useLangStore();
   const { t } = useTranslation();
+  const puddle = puddleFor(signed);
 
   useEffect(() => {
     if (!open) return;
@@ -280,7 +285,7 @@ export function CanvasTooling() {
         <ToolButton tool="language" label={t('languages')} Icon={LanguageIcon} open={open === 'language'} onToggle={() => toggle('language')} />
         <ToolButton
           tool="fingerspelling"
-          label={signed ? `${t('fingerspelling')} (F)` : `${t('fingerspelling')} — ${t('pickSignedLanguage')}`}
+          label={signed ? tip(t, 'fingerspelling') : `${t('fingerspelling')} — ${t('pickSignedLanguage')}`}
           Icon={HandIcon}
           disabled={!signed}
           open={open === 'fingerspelling'}
@@ -293,7 +298,7 @@ export function CanvasTooling() {
               ? `${t('mouthing')} — ${t('pickSpokenLanguage')}`
               : !mouthingSupported(spoken)
                 ? t('mouthingUnavailable')
-                : `${t('mouthing')} (M)`
+                : tip(t, 'mouthing')
           }
           Icon={MouthIcon}
           disabled={!spoken || !mouthingSupported(spoken)}
@@ -307,7 +312,7 @@ export function CanvasTooling() {
               ? `${t('translate')} — ${t('pickSpokenLanguage')}`
               : !signed
                 ? `${t('translate')} — ${t('pickSignedLanguage')}`
-                : `${t('translate')} (T)`
+                : tip(t, 'translate')
           }
           Icon={TranslateIcon}
           disabled={!signed || !spoken}
@@ -316,9 +321,9 @@ export function CanvasTooling() {
         />
         <ToolButton
           tool="search"
-          label={puddleFor(signed) ? `${t('search')} (L)` : `${t('search')} — ${t('pickSignedLanguage')}`}
+          label={puddle ? tip(t, 'search') : `${t('search')} — ${t('pickSignedLanguage')}`}
           Icon={SearchIcon}
-          disabled={!puddleFor(signed)}
+          disabled={!puddle}
           open={open === 'search'}
           onToggle={() => toggle('search')}
         />

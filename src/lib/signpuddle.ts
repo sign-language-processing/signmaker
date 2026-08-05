@@ -3,15 +3,10 @@ import { IANASignedLanguages } from '../i18n/ianaLanguages';
 const SIGNPUDDLE_API = 'https://signpuddle.com/server';
 const LIMIT = 20;
 
-const COUNTRY = new Map<string, string>();
-for (const l of IANASignedLanguages) {
-  if (l.signed && l.country && !COUNTRY.has(l.signed)) COUNTRY.set(l.signed, l.country);
-}
-
 /** SignPuddle public dictionary for a signed language, e.g. ase → ase-US-dictionary-public.
  *  Empty when the language has no country (no puddle to search). */
 export const puddleFor = (signed: string): string => {
-  const country = COUNTRY.get(signed);
+  const country = signed && IANASignedLanguages.find((l) => l.signed === signed)?.country;
   return country ? `${signed}-${country.toUpperCase()}-dictionary-public` : '';
 };
 
