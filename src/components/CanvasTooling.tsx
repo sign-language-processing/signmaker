@@ -95,10 +95,13 @@ async function generateResults(tool: TextTool, text: string, signed: string, spo
       signal,
     });
     const data = (await res.json()) as { output?: string[] };
-    const fsw = data.output?.[0] || '';
-    // The model emits a placeholder M500x500 box; recompute it from the actual
+    // The output may be several space-separated signs; each becomes its own pick.
+    // The model emits placeholder M500x500 boxes; recompute them from the actual
     // glyph extents so the svg (and addSign placement) get the real size.
-    return fsw ? [{ fsw: signNormalize(fsw) }] : [];
+    return (data.output?.[0] || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((fsw) => ({ fsw: signNormalize(fsw) }));
   }
   const url =
     tool === 'fingerspelling'
@@ -116,14 +119,29 @@ const PLACEHOLDER: Record<TextTool, 'wordToFingerspell' | 'wordToMouth' | 'textT
   search: 'wordToSearch',
 };
 
-function ResultButton({ fsw, tip, onPick }: { fsw: string; tip: string; onPick: () => void }) {
+function ResultButton({ fsw, tip, selected, onPick }: { fsw: string; tip: string; selected: boolean; onPick: () => void }) {
   const svg = useSignSvg(fsw);
-  return <button type="button" className="tool-use" data-tip={tip} aria-label={tip} onClick={onPick} dangerouslySetInnerHTML={{ __html: svg }} />;
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`tool-use${selected ? ' is-selected' : ''}`}
+      data-tip={tip}
+      aria-label={tip}
+      onClick={onPick}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
 }
 
 function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => void }) {
   const [text, setText] = useState('');
   const [results, setResults] = useState<Result[]>([]);
+  const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
   const inputRef = useRef<HTMLInputElement>(null);
   const addSign = useSignStore((s) => s.addSign);
@@ -149,6 +167,7 @@ function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => voi
       try {
         const found = await generateResults(tool, trimmed, signed, spoken, controller.signal);
         setResults(found);
+        setSelected(0);
         setStatus(found.length ? 'idle' : 'empty');
       } catch {
         if (!controller.signal.aborted) {
@@ -177,17 +196,23 @@ function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => voi
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && results.length) {
+          if (!results.length) return;
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
-            pick(results[0].fsw);
+            setSelected((s) => (s + (e.key === 'ArrowDown' ? 1 : results.length - 1)) % results.length);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            pick(results[selected].fsw);
           }
         }}
       />
-      <div className={`tool-result${tool === 'search' && status === 'idle' && results.length ? ' tool-results' : ''}`}>
+      <div className={`tool-result${status === 'idle' && results.length > 1 ? ' tool-results' : ''}`}>
         {status === 'loading' && <span className="tool-hint">…</span>}
         {status === 'empty' && <span className="tool-hint">{t('noResult')}</span>}
         {status === 'idle' &&
-          results.map((r, i) => <ResultButton key={i} fsw={r.fsw} tip={r.tip || t('addToCanvas')} onPick={() => pick(r.fsw)} />)}
+          results.map((r, i) => (
+            <ResultButton key={i} fsw={r.fsw} tip={r.tip || t('addToCanvas')} selected={i === selected} onPick={() => pick(r.fsw)} />
+          ))}
       </div>
     </div>
   );
