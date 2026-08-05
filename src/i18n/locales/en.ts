@@ -63,6 +63,8 @@ const en: Messages = {
   pickSpokenLanguage: 'pick a spoken language',
   mouthingUnavailable: 'Mouthing not available for this language',
   textToTranslate: 'Text to translate…',
+  search: 'Search',
+  wordToSearch: 'Word to look up…',
   addToCanvas: 'Add to canvas',
   noResult: 'No result',
   wordToFingerspell: 'Word to fingerspell…',

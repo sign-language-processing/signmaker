@@ -6,6 +6,7 @@ import { useToolStore } from '../store/toolStore';
 import { usePaletteStore } from '../store/paletteStore';
 import { useShortcutStore } from '../store/shortcutStore';
 import { save } from './bridge';
+import { puddleFor } from './signpuddle';
 import { mouthingSupported } from '../i18n/languageNames';
 
 type SignState = ReturnType<typeof useSignStore.getState>;
@@ -122,6 +123,14 @@ export const SHORTCUTS: Shortcut[] = [
     run: () => {
       const { signed, spoken } = useLangStore.getState();
       if (signed && spoken) useToolStore.getState().setOpen('translate');
+    },
+  },
+  {
+    id: 'search',
+    label: 'search',
+    bindings: [[76]],
+    run: () => {
+      if (puddleFor(useLangStore.getState().signed)) useToolStore.getState().setOpen('search');
     },
   },
   // Display-only entries: handled by dedicated code in useKeyboard, listed here so the registry is the

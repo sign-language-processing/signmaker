@@ -65,6 +65,8 @@ export interface Messages {
   pickSpokenLanguage: string;
   mouthingUnavailable: string;
   textToTranslate: string;
+  search: string;
+  wordToSearch: string;
   addToCanvas: string;
   noResult: string;
   wordToFingerspell: string;
