@@ -5,11 +5,13 @@ import { useToolStore, type Tool } from '../store/toolStore';
 import { useTranslation } from '../hooks/useTranslation';
 import { IANASignedLanguages } from '../i18n/ianaLanguages';
 import { signedLanguageName, spokenLanguageName, spokenApiCode, mouthingSupported } from '../i18n/languageNames';
-import { signNormalize } from '../lib/sign';
+import { signNormalize, swu2fsw } from '../lib/sign';
+import { puddleFor, searchPuddle } from '../lib/signpuddle';
 import { useSignSvg } from '../hooks/useGlyph';
 import { recaptchaToken } from '../lib/recaptcha';
+import { tip } from '../lib/shortcuts';
 import { apiDomain } from '../lib/api';
-import { LanguageIcon, HandIcon, MouthIcon, TranslateIcon } from './icons';
+import { LanguageIcon, HandIcon, MouthIcon, TranslateIcon, SearchIcon } from './icons';
 
 const API = `https://signwriting.${apiDomain}`;
 const TRANSLATE_API = `https://sw-translation.${apiDomain}`;
@@ -74,7 +76,19 @@ function LanguagePopover() {
   );
 }
 
-async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', text: string, signed: string, spoken: string, signal: AbortSignal): Promise<string> {
+type TextTool = Exclude<Tool, 'language'>;
+interface Result {
+  fsw: string;
+  tip?: string; // entry terms for search results; generated signs use the default tip
+}
+
+async function generateResults(tool: TextTool, text: string, signed: string, spoken: string, signal: AbortSignal): Promise<Result[]> {
+  if (tool === 'search') {
+    const entries = await searchPuddle(puddleFor(signed), text, signal);
+    // Puddle entries carry real signboxes (unlike translate's placeholder), so they
+    // render fine as-is; pick() normalizes the one sign that reaches the canvas.
+    return entries.map((e) => ({ fsw: swu2fsw(e.sign), tip: e.terms.join(', ') }));
+  }
   if (tool === 'translate') {
     const token = await recaptchaToken('api_request');
     const res = await fetch(`${TRANSLATE_API}/`, {
@@ -84,10 +98,13 @@ async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', te
       signal,
     });
     const data = (await res.json()) as { output?: string[] };
-    const fsw = data.output?.[0] || '';
-    // The model emits a placeholder M500x500 box; recompute it from the actual
+    // The output may be several space-separated signs; each becomes its own pick.
+    // The model emits placeholder M500x500 boxes; recompute them from the actual
     // glyph extents so the svg (and addSign placement) get the real size.
-    return fsw && signNormalize(fsw);
+    return (data.output?.[0] || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((fsw) => ({ fsw: signNormalize(fsw) }));
   }
   const url =
     tool === 'fingerspelling'
@@ -95,14 +112,40 @@ async function generateFsw(tool: 'fingerspelling' | 'mouthing' | 'translate', te
       : `${API}/mouthing?text=${encodeURIComponent(text)}&spoken_language=${spokenApiCode(spoken)}`;
   const res = await fetch(url, { signal });
   const data = (await res.json()) as { fsw?: string };
-  return data.fsw || '';
+  return data.fsw ? [{ fsw: data.fsw }] : [];
 }
 
-function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing' | 'translate'; onClose: () => void }) {
+const TOOLS: Record<TextTool, { placeholder: string; warm?: string }> = {
+  fingerspelling: { placeholder: 'wordToFingerspell', warm: API },
+  mouthing: { placeholder: 'wordToMouth', warm: API },
+  translate: { placeholder: 'textToTranslate', warm: TRANSLATE_API },
+  search: { placeholder: 'wordToSearch' },
+};
+
+function ResultButton({ fsw, tip, selected, onPick }: { fsw: string; tip: string; selected: boolean; onPick: () => void }) {
+  const svg = useSignSvg(fsw);
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView({ block: 'nearest' });
+  }, [selected]);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={`tool-use${selected ? ' is-selected' : ''}`}
+      data-tip={tip}
+      aria-label={tip}
+      onClick={onPick}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
+function GeneratePopover({ tool, onClose }: { tool: TextTool; onClose: () => void }) {
   const [text, setText] = useState('');
-  const [fsw, setFsw] = useState('');
+  const [results, setResults] = useState<Result[]>([]);
+  const [selected, setSelected] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'empty'>('idle');
-  const preview = useSignSvg(fsw);
   const inputRef = useRef<HTMLInputElement>(null);
   const addSign = useSignStore((s) => s.addSign);
   const { signed, spoken } = useLangStore();
@@ -110,14 +153,15 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
 
   useEffect(() => {
     inputRef.current?.focus();
-    warmUp(tool === 'translate' ? TRANSLATE_API : API);
+    const { warm } = TOOLS[tool];
+    if (warm) warmUp(warm);
   }, [tool]);
 
   // Keyed on the trimmed text so whitespace-only edits don't abort and re-fire the request.
   const trimmed = text.trim();
   useEffect(() => {
     if (!trimmed) {
-      setFsw('');
+      setResults([]);
       setStatus('idle');
       return;
     }
@@ -125,12 +169,13 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
     const timer = setTimeout(async () => {
       setStatus('loading');
       try {
-        const result = await generateFsw(tool, trimmed, signed, spoken, controller.signal);
-        setFsw(result);
-        setStatus(result ? 'idle' : 'empty');
+        const found = await generateResults(tool, trimmed, signed, spoken, controller.signal);
+        setResults(found);
+        setSelected(0);
+        setStatus(found.length ? 'idle' : 'empty');
       } catch {
         if (!controller.signal.aborted) {
-          setFsw('');
+          setResults([]);
           setStatus('empty');
         }
       }
@@ -141,9 +186,8 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
     };
   }, [trimmed, tool, signed, spoken]);
 
-  const accept = () => {
-    if (!fsw) return;
-    addSign(fsw);
+  const pick = (fsw: string) => {
+    addSign(signNormalize(fsw));
     onClose();
   };
 
@@ -152,29 +196,27 @@ function GeneratePopover({ tool, onClose }: { tool: 'fingerspelling' | 'mouthing
       <input
         ref={inputRef}
         className="tool-input"
-        placeholder={tool === 'fingerspelling' ? t('wordToFingerspell') : tool === 'mouthing' ? t('wordToMouth') : t('textToTranslate')}
+        placeholder={t(TOOLS[tool].placeholder)}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
+          if (!results.length) return;
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             e.preventDefault();
-            accept();
+            setSelected((s) => (s + (e.key === 'ArrowDown' ? 1 : results.length - 1)) % results.length);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            pick(results[selected].fsw);
           }
         }}
       />
-      <div className="tool-result">
+      <div className={`tool-result${status === 'idle' && results.length > 1 ? ' tool-results' : ''}`}>
         {status === 'loading' && <span className="tool-hint">…</span>}
         {status === 'empty' && <span className="tool-hint">{t('noResult')}</span>}
-        {status === 'idle' && fsw && (
-          <button
-            type="button"
-            className="tool-use"
-            data-tip={t('addToCanvas')}
-            aria-label={t('addToCanvas')}
-            onClick={accept}
-            dangerouslySetInnerHTML={{ __html: preview }}
-          />
-        )}
+        {status === 'idle' &&
+          results.map((r, i) => (
+            <ResultButton key={i} fsw={r.fsw} tip={r.tip || t('addToCanvas')} selected={i === selected} onPick={() => pick(r.fsw)} />
+          ))}
       </div>
     </div>
   );
@@ -215,6 +257,7 @@ export function CanvasTooling() {
   const ref = useRef<HTMLDivElement>(null);
   const { signed, spoken } = useLangStore();
   const { t } = useTranslation();
+  const puddle = puddleFor(signed);
 
   useEffect(() => {
     if (!open) return;
@@ -237,14 +280,12 @@ export function CanvasTooling() {
   return (
     <div className="canvas-tooling" ref={ref}>
       {open === 'language' && <LanguagePopover />}
-      {(open === 'fingerspelling' || open === 'mouthing' || open === 'translate') && (
-        <GeneratePopover tool={open} onClose={() => setOpen(null)} />
-      )}
+      {open && open !== 'language' && <GeneratePopover tool={open} onClose={() => setOpen(null)} />}
       <div className="tooling-buttons">
         <ToolButton tool="language" label={t('languages')} Icon={LanguageIcon} open={open === 'language'} onToggle={() => toggle('language')} />
         <ToolButton
           tool="fingerspelling"
-          label={signed ? `${t('fingerspelling')} (F)` : `${t('fingerspelling')} — ${t('pickSignedLanguage')}`}
+          label={signed ? tip(t, 'fingerspelling') : `${t('fingerspelling')} — ${t('pickSignedLanguage')}`}
           Icon={HandIcon}
           disabled={!signed}
           open={open === 'fingerspelling'}
@@ -257,7 +298,7 @@ export function CanvasTooling() {
               ? `${t('mouthing')} — ${t('pickSpokenLanguage')}`
               : !mouthingSupported(spoken)
                 ? t('mouthingUnavailable')
-                : `${t('mouthing')} (M)`
+                : tip(t, 'mouthing')
           }
           Icon={MouthIcon}
           disabled={!spoken || !mouthingSupported(spoken)}
@@ -271,12 +312,20 @@ export function CanvasTooling() {
               ? `${t('translate')} — ${t('pickSpokenLanguage')}`
               : !signed
                 ? `${t('translate')} — ${t('pickSignedLanguage')}`
-                : `${t('translate')} (T)`
+                : tip(t, 'translate')
           }
           Icon={TranslateIcon}
           disabled={!signed || !spoken}
           open={open === 'translate'}
           onToggle={() => toggle('translate')}
+        />
+        <ToolButton
+          tool="search"
+          label={puddle ? tip(t, 'search') : `${t('search')} — ${t('pickSignedLanguage')}`}
+          Icon={SearchIcon}
+          disabled={!puddle}
+          open={open === 'search'}
+          onToggle={() => toggle('search')}
         />
       </div>
     </div>

@@ -997,6 +997,10 @@ html,body {
 }
 .tool-use { border: none; background: none; cursor: pointer; padding: 6px; }
 .tool-use svg { max-height: 90px; max-width: 200px; }
+.tool-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px; max-height: 40vh; overflow-y: auto; }
+.tool-results .tool-use { border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; }
+.tool-results .tool-use svg { max-width: 100%; }
+.tool-use.is-selected { outline: 2px solid #1e293b; border-radius: 6px; }
 .tool-clear {
   align-self: flex-end;
   border: 1px solid #cbd5e1;

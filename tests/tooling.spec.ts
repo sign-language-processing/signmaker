@@ -42,7 +42,7 @@ test.describe('language tooling', () => {
     await page.route('https://sw-translation.nagish.io/**', (route) => {
       if (route.request().method() !== 'POST') return route.fulfill({ json: { status: 'ok' } });
       recaptchaToken = route.request().headers()['x-recaptcha-token'];
-      return route.fulfill({ json: { input: ['hello'], output: ['M518x529S14c20481x471S27106503x489'] } });
+      return route.fulfill({ json: { input: ['hello'], output: ['M518x529S14c20481x471S27106503x489 M510x515S10000490x485'] } });
     });
 
     await page.locator('[data-tool=language]').click();
@@ -51,9 +51,44 @@ test.describe('language tooling', () => {
 
     await page.locator('[data-tool=translate]').click();
     await page.locator('.tool-input').fill('hello');
-    await page.locator('.tool-use').click();
+    // A multi-sign translation offers each sign separately.
+    await expect(page.locator('.tool-use')).toHaveCount(2);
+    await page.locator('.tool-use').first().click();
 
     expect(recaptchaToken).toBe('test-token');
     await expect(page.locator('#signbox .signbox-symbol')).toHaveCount(2);
+  });
+
+  test('search lists SignPuddle results and adds one to the canvas', async ({ page }) => {
+    let searchUrl = '';
+    await page.route('https://signpuddle.com/server/**', (route) => {
+      searchUrl = route.request().url();
+      return route.fulfill({
+        json: {
+          total: 2,
+          data: [
+            { sign: '𝠃𝤘𝤣񁲡𝣳𝣩񈩧𝤉𝣻', terms: ['hello'] },
+            { sign: '𝠃𝤐𝤕񀀁𝣼𝣷', terms: ['hello there'] },
+          ],
+        },
+      });
+    });
+
+    await expect(page.locator('[data-tool=search]')).toBeDisabled();
+    await page.locator('[data-tool=language]').click();
+    await page.locator('.tool-field select').nth(1).selectOption('ase');
+    await page.locator('[data-tool=language]').click();
+
+    await page.locator('[data-tool=search]').click();
+    await page.locator('.tool-input').fill('hello');
+    await expect(page.locator('.tool-use')).toHaveCount(2);
+    expect(searchUrl).toContain('/dictionary/ase-US-dictionary-public/search/terms/hello');
+
+    // Arrow keys move the selection; Enter adds the selected sign (the one-symbol second entry).
+    await expect(page.locator('.tool-use').first()).toHaveClass(/is-selected/);
+    await page.locator('.tool-input').press('ArrowDown');
+    await expect(page.locator('.tool-use').nth(1)).toHaveClass(/is-selected/);
+    await page.locator('.tool-input').press('Enter');
+    await expect(page.locator('#signbox .signbox-symbol')).toHaveCount(1);
   });
 });
