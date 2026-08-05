@@ -87,6 +87,7 @@ export interface Messages {
   collapseTools: string;
   copySign: string;
   signCopied: string;
+  tooLargeToSave: string;
   pasteSign: string;
   moveSelection: string;
   keyboardShortcuts: string;

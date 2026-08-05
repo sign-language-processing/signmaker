@@ -37,6 +37,7 @@ interface SignState {
   swulive: () => string;
   swunorm: () => string;
   swuselection: () => string;
+  saveable: () => boolean;
 
   addhistory: () => void;
   setFromFsw: (fsw: string) => void;
@@ -89,6 +90,14 @@ export const useSignStore = create<SignState>((set, get) => ({
   swuselection: () => {
     const selected = get().list.filter((s) => s.selected);
     return selected.length ? sign.swulive(get().signbox, [], selected) : get().swulive();
+  },
+
+  // Saving normalizes first (the same recentering as ⌘Home), and normalization centers on the
+  // head/trunk symbols alone — a tall sign whose face sits high gets shoved past the 250–749 lane,
+  // producing SWU that is no longer valid SignWriting. Refuse to hand that out.
+  saveable: () => {
+    const swu = get().swunorm();
+    return !swu || sign.isValidSwu(swu);
   },
 
   addhistory: () => {

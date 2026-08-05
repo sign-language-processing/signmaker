@@ -4,6 +4,7 @@ import { useSignStore } from '../store/signStore';
 import { useUiStore } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSaveable } from '../hooks/useSaveable';
 import { useDrag, pointInElement, seqPosition } from '../hooks/useDrag';
 import { save } from '../lib/bridge';
 import { SYMBOL_NAMES } from '../i18n/symbolNames';
@@ -128,6 +129,7 @@ export function Palette() {
   const selectActive = useSelectModeStore((s) => s.active);
   const cursorRow = useSelectModeStore((s) => s.row);
   const cursorCol = useSelectModeStore((s) => s.col);
+  const saveable = useSaveable();
 
   const tooltipPrefix = base ? '' : group ? 'base_' : 'group_';
   const atTop = !group && !base;
@@ -171,7 +173,13 @@ export function Palette() {
             </>
           )}
         </nav>
-        <button type="button" className="palette-save" onClick={save} data-tip={tip(t, 'save')}>
+        <button
+          type="button"
+          className="palette-save"
+          onClick={save}
+          aria-disabled={!saveable}
+          data-tip={saveable ? tip(t, 'save') : t('tooLargeToSave')}
+        >
           <SaveIcon />
           {t('save')}
         </button>

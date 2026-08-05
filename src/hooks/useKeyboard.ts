@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSignStore } from '../store/signStore';
-import { useUiStore } from '../store/uiStore';
+import { useUiStore, toast } from '../store/uiStore';
 import { useSelectModeStore } from '../store/selectModeStore';
 import { usePaletteStore } from '../store/paletteStore';
 import { keyDown, keyUp, stopAllMoves, type Direction } from '../lib/arrowRepeat';
@@ -138,7 +138,6 @@ export function useKeyboard(): void {
     // ⌘C/⌘V ride the browser's own copy/paste events rather than a keydown binding: no clipboard
     // permission prompt, no async read, and text selection inside inputs/dialogs still copies natively.
     const clipboardBusy = (event: ClipboardEvent) => isTyping(event.target) || !!document.querySelector('dialog[open]');
-    let toastTimer: number | undefined;
 
     const onCopy = (event: ClipboardEvent) => {
       if (clipboardBusy(event)) return;
@@ -146,9 +145,7 @@ export function useKeyboard(): void {
       if (!swu) return;
       event.clipboardData?.setData('text/plain', swu);
       event.preventDefault();
-      useUiStore.getState().set({ toast: 'signCopied' });
-      clearTimeout(toastTimer);
-      toastTimer = window.setTimeout(() => useUiStore.getState().set({ toast: '' }), 1500);
+      toast('signCopied');
     };
 
     const onPaste = (event: ClipboardEvent) => {
@@ -170,7 +167,6 @@ export function useKeyboard(): void {
       window.removeEventListener('blur', onBlur);
       window.removeEventListener('copy', onCopy);
       window.removeEventListener('paste', onPaste);
-      clearTimeout(toastTimer);
       cancelLearn();
     };
   }, []);

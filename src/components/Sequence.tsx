@@ -2,6 +2,7 @@ import { useSignStore } from '../store/signStore';
 import { useSymbolSvg } from '../hooks/useGlyph';
 import { useDrag, seqPosition } from '../hooks/useDrag';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSaveable } from '../hooks/useSaveable';
 import { save } from '../lib/bridge';
 import { SaveIcon } from './icons';
 
@@ -20,10 +21,18 @@ function SortItem({ symbolKey }: { symbolKey: string }) {
 export function Sequence() {
   const { t } = useTranslation();
   const sort = useSignStore((s) => s.sort);
+  const saveable = useSaveable();
   return (
     <div id="sequence">
       {/* Mobile only (CSS-hidden on desktop): the palette Save is unreachable while the drawer is closed. */}
-      <button type="button" className="seq-save" onClick={save} data-tip={t('save')} aria-label={t('save')}>
+      <button
+        type="button"
+        className="seq-save"
+        onClick={save}
+        aria-disabled={!saveable}
+        data-tip={saveable ? t('save') : t('tooLargeToSave')}
+        aria-label={t('save')}
+      >
         <SaveIcon />
       </button>
       {[...sort, ''].map((key, i) => (

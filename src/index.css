@@ -481,6 +481,17 @@ html,body {
   width: 1.1em;
   height: 1.1em;
 }
+/* aria-disabled, not [disabled]: a disabled button swallows pointer events, and the tooltip
+   explaining *why* Save is blocked is the whole point. The click is a no-op that toasts instead. */
+.palette-save[aria-disabled='true'],
+.seq-save[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.palette-save[aria-disabled='true']:hover,
+.seq-save[aria-disabled='true']:hover {
+  background: #1e293b;
+}
 
 /* Save shortcut at the top of the sequence rail — only while the palette
    (which holds the regular Save button) is folded away as the mobile drawer. */
